@@ -1,0 +1,3 @@
+%{
+  "tenbin_dns": {:git, "https://github.com/toshi0806/tenbin_dns.git", "3cde4b6708b2e606dbdbe5cb684377caaec0a00d", [tag: "0.0.1"]},
+}
