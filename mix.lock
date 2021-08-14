@@ -1,3 +1,4 @@
 %{
-  "tenbin_dns": {:git, "https://github.com/toshi0806/tenbin_dns.git", "3cde4b6708b2e606dbdbe5cb684377caaec0a00d", [tag: "0.0.1"]},
+  "socket": {:hex, :socket, "0.3.13", "98a2ab20ce17f95fb512c5cadddba32b57273e0d2dba2d2e5f976c5969d0c632", [:mix], [], "hexpm", "f82ea9833ef49dde272e6568ab8aac657a636acb4cf44a7de8a935acb8957c2e"},
+  "tenbin_dns": {:git, "https://github.com/toshi0806/tenbin_dns.git", "1f2d709931d6dfa50206cff5f8a11cfb6e2a852e", [tag: "0.1.2"]},
 }
