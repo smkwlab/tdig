@@ -37,6 +37,7 @@ defmodule Tdig.CLI do
     |> add_default(:port, 53)
     |> add_default(:type, :a)
     |> add_default(:class, :in)
+    |> check_args
  end
 
   def parse_switches({parsed, argv, errors}) do
@@ -121,12 +122,31 @@ defmodule Tdig.CLI do
     arg
   end
 
-  def process(%{help: true}) do
+  def check_args(%{help: true}) do
+    %{help: true, exit_code: 0}
+  end
+
+  def check_args(%{name: nil}) do
+    %{help: true, exit_code: 1}
+  end
+
+  def check_args(arg) do
+    arg
+  end
+
+  def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
 Usage: tdig [options] [@server] host [type] [class]
-  -
+
+options
+ -c --class <class>  specify query class
+ -t --type <type>    specify query type
+ -p --port <port>    specify port number
+    --v4             use IPv4 transport
+    --v6             use IPv6 transport
+ -h --help           print help and exit
 """
-    System.halt(0)
+    System.halt(exit_code)
   end
 
   def process(arg) do
