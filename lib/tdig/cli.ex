@@ -77,11 +77,11 @@ defmodule Tdig.CLI do
   end
 
   def parse_argv_item([arg1 | argv], %{type: nil} = result) do
-    argv |> parse_argv_item(%{result | type: str2atom(arg1)})
+    argv |> parse_argv_item(%{result | type: arg1 |> str2atom})
   end
 
   def parse_argv_item([arg1 | argv], %{class: nil} = result) do
-    argv |> parse_argv_item(%{result | class: str2atom(arg1)})
+    argv |> parse_argv_item(%{result | class: arg1 |> str2atom})
   end
 
   def parse_argv_item(_, _) do
