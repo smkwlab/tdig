@@ -167,20 +167,22 @@ defmodule Tdig do
     IO.puts ";; QUESTION SECTION:"
     p.question
     |> Enum.map(fn n -> n |> question_item_to_string end)
-    |> Enum.each(fn n -> n |> IO.puts end)
+    |> Enum.each(fn n -> n |> IO.write end)
     IO.puts ""
     p
   end
 
   def question_item_to_string(q) do
-    ";#{q.qname}			#{a2s(q.qclass)}	#{a2s(q.qtype)}"
+    """
+;#{q.qname}			#{a2s(q.qclass)}	#{a2s(q.qtype)}
+"""
   end
   
   def disp_answer(p, part) do
     IO.puts ";; #{a2s(part)} SECTION:"
     p[part]
     |> Enum.map(fn n-> n |> answer_item_to_string end)
-    |> Enum.each(fn n -> n |> IO.puts end)
+    |> Enum.each(fn n -> n |> IO.write end)
     IO.puts ""
     p
   end
