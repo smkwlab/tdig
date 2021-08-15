@@ -27,12 +27,14 @@ defmodule Tdig do
     }
     |> DNSpacket.create
 
+    start = System.monotonic_time(:millisecond)
+
     socket
     |> Socket.Datagram.send(packet, {server, arg.port})
 
     socket 
     |> Socket.Datagram.recv!
-    |> disp_response
+    |> disp_response(start, System.monotonic_time(:millisecond))
   end
 
   def select_protocol(_, true) do
@@ -43,7 +45,7 @@ defmodule Tdig do
     {:inet, 4}
   end
 
-  def disp_response({answer, _}) do
+  def disp_response({answer, {server, port}}, start, finish) do
     answer
     |> DNSpacket.parse
     |> disp_header
@@ -51,6 +53,9 @@ defmodule Tdig do
     |> disp_answer(:answer)
     |> disp_answer(:authority)
     |> disp_answer(:additional)
+
+    {server, port, answer, start, finish}
+    |> disp_tailer
   end
 
   defp qr(0) do
@@ -224,5 +229,12 @@ defmodule Tdig do
 
   def disp_rdata(_type, rdata) do
     IO.puts "#{inspect(rdata)}"
+  end
+
+  def disp_tailer{server, port, answer, start, finish} do
+    IO.puts ";; Query time: #{finish - start} ms"
+    IO.puts ";; SERVER: #{server|>:inet.ntoa|>to_string}##{port}(#{server|>:inet.ntoa|>to_string})"
+    IO.puts ";; WHEN: #{DateTime.now!("Asia/Tokyo") |> DateTime.to_string}"
+    IO.puts ";; MSG SIZE rcvd: #{byte_size(answer)}"
   end
 end
