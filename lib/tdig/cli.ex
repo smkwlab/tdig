@@ -44,11 +44,11 @@ defmodule Tdig.CLI do
   end
 
   def switch_convert_atom({:class, value}) do
-    {:class, str2atom(value)}
+    {:class, value |> str2atom}
   end
 
   def switch_convert_atom({:type, value}) do
-    {:type, str2atom(value)}
+    {:type, value |> str2atom}
   end
 
   def switch_convert_atom(n) do
@@ -56,11 +56,11 @@ defmodule Tdig.CLI do
   end
 
   def str2atom(arg) do
-    String.to_atom(String.downcase(arg))
+    arg |> String.downcase |> String.to_atom
   end
 
   def parse_argv({parsed, argv, errors}) do
-    {parsed, parse_argv_item(argv, %{server: nil, name: nil, type: nil, class: nil}), errors}
+    {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
   end
 
   def parse_argv_item([], result) do
@@ -68,20 +68,19 @@ defmodule Tdig.CLI do
   end
 
   def parse_argv_item([<<"@",arg1::binary>> | argv], result) do
-    parse_argv_item(argv, %{result | server: arg1})
+    argv |> parse_argv_item(%{result | server: arg1})
   end
 
   def parse_argv_item([arg1 | argv], %{name: nil} = result) do
-    parse_argv_item(argv, %{result | name: arg1})
     argv |> parse_argv_item(%{result | name: arg1 |> add_tail_dot})
   end
 
   def parse_argv_item([arg1 | argv], %{type: nil} = result) do
-    parse_argv_item(argv, %{result | type: str2atom(arg1)})
+    argv |> parse_argv_item(%{result | type: str2atom(arg1)})
   end
 
   def parse_argv_item([arg1 | argv], %{class: nil} = result) do
-    parse_argv_item(argv, %{result | class: str2atom(arg1)})
+    argv |> parse_argv_item(%{result | class: str2atom(arg1)})
   end
 
   def parse_argv_item(_, _) do
