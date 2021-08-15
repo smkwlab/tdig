@@ -45,8 +45,8 @@ defmodule Tdig do
     {:inet, 4}
   end
 
-  def disp_response({answer, {server, port}}, start, finish) do
-    answer
+  def disp_response({response, {server, port}}, start, finish) do
+    response
     |> DNSpacket.parse
     |> disp_header
     |> disp_question
@@ -54,8 +54,7 @@ defmodule Tdig do
     |> disp_answer(:authority)
     |> disp_answer(:additional)
 
-    {server, port, answer, start, finish}
-    |> disp_tailer
+    disp_tailer(server |> :inet.ntoa |> to_string, port, response |> byte_size, finish - start)
   end
 
   defp qr(0) do
@@ -159,82 +158,83 @@ defmodule Tdig do
   end
 
   def a2s(a) do
-    String.upcase(Atom.to_string(a))
+    a
+    |> Atom.to_string
+    |> String.upcase
   end
 
   def disp_question(p) do
     IO.puts ";; QUESTION SECTION:"
-    disp_question_item(p.question)
+    p.question
+    |> Enum.map(fn n -> n |> question_item_to_string end)
+    |> Enum.each(fn n -> n |> IO.puts end)
     IO.puts ""
     p
   end
 
-  def disp_question_item([]) do
+  def question_item_to_string(q) do
+    ";#{q.qname}			#{a2s(q.qclass)}	#{a2s(q.qtype)}"
   end
-
-  def disp_question_item(([q|tail])) do
-    IO.puts ";#{q.qname}			#{a2s(q.qclass)}	#{a2s(q.qtype)}"
-    disp_question_item(tail)
-  end
-
+  
   def disp_answer(p, part) do
     IO.puts ";; #{a2s(part)} SECTION:"
-    disp_answer_item(p[part])
+    p[part]
+    |> Enum.map(fn n-> n |> answer_item_to_string end)
+    |> Enum.each(fn n -> n |> IO.puts end)
     IO.puts ""
     p
   end
 
-  def disp_answer_item([]) do
+  def answer_item_to_string(a) do
+    """
+#{a.name}		#{a.ttl}	#{a2s(a.class)}	#{a2s(a.type)}	#{a.rdata |> rdata_to_string(a.type)}
+"""
   end
 
-  def disp_answer_item([a|tail]) do
-    IO.write "#{a.name}		#{a.ttl}	#{a2s(a.class)}	#{a2s(a.type)}	"
-    disp_rdata(a.type, a.rdata)
-    disp_answer_item(tail)
-  end
-
-  def disp_rdata(:a, rdata) do
+  def rdata_to_string(rdata, :a) do
     <<a1::8,a2::8,a3::8,a4::8>> = <<rdata.addr::32>>
-    IO.puts :inet.ntoa({a1,a2,a3,a4})
+    :inet.ntoa({a1,a2,a3,a4})
   end
 
-  def disp_rdata(:ns, rdata) do
-    IO.puts rdata.name
+  def rdata_to_string(rdata, :ns) do
+    rdata.name
   end
 
-  def disp_rdata(:cname, rdata) do
-    IO.puts rdata.name
+  def rdata_to_string(rdata, :cname) do
+    rdata.name
   end
 
-  def disp_rdata(:soa, rdata) do
-    IO.puts "#{rdata.mname} #{rdata.rname} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
+  def rdata_to_string(rdata, :soa) do
+    "#{rdata.mname} #{rdata.rname} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
   end
 
-  def disp_rdata(:mx, rdata) do
-    IO.puts "#{rdata.preference} #{rdata.name}"
+  def rdata_to_string(rdata, :mx) do
+    "#{rdata.preference} #{rdata.name}"
   end
 
-  def disp_rdata(:txt, rdata) do
-    IO.puts rdata.txt
+  def rdata_to_string(rdata, :txt) do
+    rdata.txt
   end
 
-  def disp_rdata(:aaaa, rdata) do
+  def rdata_to_string(rdata, :aaaa) do
     <<a1::16,a2::16,a3::16,a4::16,a5::16,a6::16,a7::16,a8::16>> = <<rdata.addr::128>>
-    IO.puts :inet.ntoa({a1,a2,a3,a4,a5,a6,a7,a8})
+    :inet.ntoa({a1,a2,a3,a4,a5,a6,a7,a8})
   end
 
-  def disp_rdata(:caa, rdata) do
-    IO.puts "#{rdata.flag} #{rdata.tag} #{rdata.value}"
+  def rdata_to_string(rdata, :caa) do
+    "#{rdata.flag} #{rdata.tag} #{rdata.value}"
   end
 
-  def disp_rdata(_type, rdata) do
-    IO.puts "#{inspect(rdata)}"
+  def rdata_to_string(rdata, _type) do
+    "#{inspect(rdata)}"
   end
 
-  def disp_tailer{server, port, answer, start, finish} do
-    IO.puts ";; Query time: #{finish - start} ms"
-    IO.puts ";; SERVER: #{server|>:inet.ntoa|>to_string}##{port}(#{server|>:inet.ntoa|>to_string})"
-    IO.puts ";; WHEN: #{DateTime.now!("Asia/Tokyo") |> DateTime.to_string}"
-    IO.puts ";; MSG SIZE rcvd: #{byte_size(answer)}"
+  def disp_tailer(server, port, size, time) do
+    IO.puts """
+;; Query time: #{time} ms
+;; SERVER: #{server}##{port}(#{server})
+;; WHEN: #{DateTime.now!("Asia/Tokyo") |> DateTime.to_string}
+;; MSG SIZE rcvd: #{size}
+"""
   end
 end
