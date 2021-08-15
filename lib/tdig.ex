@@ -4,11 +4,12 @@ defmodule Tdig do
   """
 
   def resolve(arg) do
-    socket = Socket.UDP.open!()
-    
+    {family, version} = select_protocol(arg.v4, arg.v6)
+    socket = Socket.UDP.open!([version: version])
+
     {:ok, server} = arg.server
     |> String.to_charlist
-    |> :inet.getaddr(select_protocol(arg.v4, arg.v6))
+    |> :inet.getaddr(family)
 
     packet = %{
       id: :rand.uniform(0xffff),
@@ -35,11 +36,11 @@ defmodule Tdig do
   end
 
   def select_protocol(_, true) do
-    :inet6
+    {:inet6, 6}
   end
 
   def select_protocol(_, _) do
-    :inet
+    {:inet, 4}
   end
 
   def disp_response({answer, _}) do
