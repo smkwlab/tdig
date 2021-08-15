@@ -73,6 +73,7 @@ defmodule Tdig.CLI do
 
   def parse_argv_item([arg1 | argv], %{name: nil} = result) do
     parse_argv_item(argv, %{result | name: arg1})
+    argv |> parse_argv_item(%{result | name: arg1 |> add_tail_dot})
   end
 
   def parse_argv_item([arg1 | argv], %{type: nil} = result) do
@@ -86,6 +87,14 @@ defmodule Tdig.CLI do
   def parse_argv_item(_, _) do
     IO.puts :stderr, "argument error"
     System.halt(1)
+  end
+
+  def add_tail_dot(name) do
+    if name |> String.ends_with?(".") do
+      name
+    else
+      name <> "."
+    end
   end
 
   def merge_switches_and_argv({parsed, argv, _errors}) do

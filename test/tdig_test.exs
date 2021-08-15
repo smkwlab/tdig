@@ -24,4 +24,8 @@ defmodule TdigTest do
     assert Tdig.a2s(:cname) == "CNAME"
   end
   
+  test "add_tail_dot" do
+    assert Tdig.CLI.add_tail_dot("example.com.") == "example.com."
+    assert Tdig.CLI.add_tail_dot("example.com") == "example.com."
+  end
 end
