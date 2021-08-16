@@ -4,13 +4,15 @@ defmodule Tdig do
   """
 
   def resolve(arg) do
-    {family, version} = select_protocol(arg.v4, arg.v6)
-    socket = Socket.UDP.open!([version: version])
+    start = System.monotonic_time(:millisecond)
+    
+    arg
+    |> get_response
+    |> write_file(arg.write)
+    |> disp_response(start, System.monotonic_time(:millisecond))
+  end
 
-    {:ok, server} = arg.server
-    |> String.to_charlist
-    |> :inet.getaddr(family)
-
+  def get_response(%{read: nil} = arg) do
     packet = %{
       id: :rand.uniform(0xffff),
       flags: 0x0100,
@@ -26,15 +28,38 @@ defmodule Tdig do
       additional: [],
     }
     |> DNSpacket.create
+    |> write_file(arg.write_request)
 
-    start = System.monotonic_time(:millisecond)
+    {family, version} = select_protocol(arg.v4, arg.v6)
+    socket = Socket.UDP.open!([version: version])
+
+    {:ok, server} = arg.server
+    |> String.to_charlist
+    |> :inet.getaddr(family)
 
     socket
     |> Socket.Datagram.send(packet, {server, arg.port})
 
     socket 
     |> Socket.Datagram.recv!
-    |> disp_response(start, System.monotonic_time(:millisecond))
+  end
+
+  def get_response(arg) do
+    {File.read!(arg.read), {{0,0,0,0}, "  '#{arg.read}'  "}}
+  end
+
+  def write_file(packet, nil) do
+    packet
+  end
+      
+  def write_file({packet, _} = result, file) do
+    :ok = file |> File.write(packet)
+    result
+  end
+
+  def write_file(packet, file) do
+    :ok = file |> File.write(packet)
+    packet
   end
 
   def select_protocol(_, true) do

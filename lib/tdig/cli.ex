@@ -21,12 +21,17 @@ defmodule Tdig.CLI do
         v4: :boolean,
         v6: :boolean,
         help: :boolean,
+        write: :string,
+        write_request: :string,
+        read: :string,
       ],
       aliases: [
         c: :class,
         t: :type,
         p: :port,
         h: :help,
+        w: :write,
+        r: :read,
       ])
     |> parse_switches
     |> parse_argv
@@ -37,6 +42,9 @@ defmodule Tdig.CLI do
     |> add_default(:port, 53)
     |> add_default(:type, :a)
     |> add_default(:class, :in)
+    |> add_default(:read, nil)
+    |> add_default(:write, nil)
+    |> add_default(:write_request, nil)
     |> check_args
  end
 
@@ -126,7 +134,7 @@ defmodule Tdig.CLI do
     %{help: true, exit_code: 0}
   end
 
-  def check_args(%{name: nil}) do
+  def check_args(%{name: nil, read: nil}) do
     %{help: true, exit_code: 1}
   end
 
@@ -139,12 +147,15 @@ defmodule Tdig.CLI do
 Usage: tdig [options] [@server] host [type] [class]
 
 options
- -c --class <class>  specify query class
- -t --type <type>    specify query type
- -p --port <port>    specify port number
-    --v4             use IPv4 transport
-    --v6             use IPv6 transport
- -h --help           print help and exit
+ -c --class <class>        specify query class
+ -t --type <type>          specify query type
+ -p --port <port>          specify port number
+    --v4                   use IPv4 transport
+    --v6                   use IPv6 transport
+ -r --read <file>          read packet from file
+ -w --write <file>         write answer packet to file
+    --write-request <file> write request packet to file
+ -h --help                 print help and exit
 """
     System.halt(exit_code)
   end
