@@ -74,6 +74,7 @@ defmodule Tdig do
     response
     |> DNSpacket.parse
     |> disp_header
+    |> disp_edns_pseudo
     |> disp_question
     |> disp_answer(:answer)
     |> disp_answer(:authority)
@@ -146,37 +147,9 @@ defmodule Tdig do
     " z"
   end
 
-  defp rcode(0) do
-    "No error condition"
-  end
-
-  defp rcode(1) do
-    "Format error"
-  end
-
-  defp rcode(2) do
-    "Server failure"
-  end
-
-  defp rcode(3) do
-    "Name Error"
-  end
-
-  defp rcode(4) do
-    "Not Implemented"
-  end
-
-  defp rcode(5) do
-    "Refused"
-  end
-
-  defp rcode(rc) do
-    "reserved(#{rc})"
-  end
-
   def disp_header(p) do
     IO.puts """
-;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{rcode(p.rcode)}, id: #{p.id}
+;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
 ;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
 """
     p
@@ -186,6 +159,21 @@ defmodule Tdig do
     a
     |> Atom.to_string
     |> String.upcase
+  end
+
+  def disp_edns_pseudo(p) do
+    p.additional
+    |> Enum.filter(fn n -> n.type == :opt end)
+    |> disp_edns_pseudo_item
+    p
+  end
+  
+  def disp_edns_pseudo_item([]) do
+  end
+
+  def disp_edns_pseudo_item([%{type: :opt} = p]) do
+    IO.puts ";; OPT PSEUDOSECTION:"
+    IO.puts "; EDNS: version: #{p.version}, flags:; udp: #{p.payload_size}"
   end
 
   def disp_question(p) do
@@ -212,6 +200,10 @@ defmodule Tdig do
     p
   end
 
+  # Do not display OPT item in answer
+  def answer_item_to_string(%{type: :opt}) do
+  end
+  
   def answer_item_to_string(a) do
     """
 #{a.name}		#{a.ttl}	#{a2s(a.class)}	#{a2s(a.type)}	#{a.rdata |> rdata_to_string(a.type)}
