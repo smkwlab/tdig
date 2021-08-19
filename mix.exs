@@ -23,7 +23,7 @@ defmodule Tdig.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:tenbin_dns, git: "https://github.com/toshi0806/tenbin_dns.git", tag: "0.1.3"},
+      {:tenbin_dns, git: "https://github.com/toshi0806/tenbin_dns.git", tag: "0.2.2"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
     ]
