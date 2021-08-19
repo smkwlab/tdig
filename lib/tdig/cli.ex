@@ -32,6 +32,7 @@ defmodule Tdig.CLI do
         h: :help,
         w: :write,
         r: :read,
+        f: :read,
       ])
     |> parse_switches
     |> parse_argv
