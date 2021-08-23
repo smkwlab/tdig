@@ -160,6 +160,7 @@ defmodule Tdig do
   def rdata_to_string(rdata, :a), do: :inet.ntoa(rdata.addr)
   def rdata_to_string(rdata, :aaaa), do: :inet.ntoa(rdata.addr)
   def rdata_to_string(rdata, :ns), do: rdata.name
+  def rdata_to_string(rdata, :ptr), do: rdata.name
   def rdata_to_string(rdata, :cname), do: rdata.name
   def rdata_to_string(rdata, :txt), do: rdata.txt
   def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{rdata.name}"

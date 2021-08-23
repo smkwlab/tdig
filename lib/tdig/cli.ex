@@ -18,21 +18,25 @@ defmodule Tdig.CLI do
         class: :string,
         type: :string,
         port: :integer,
+        ptr: :boolean,
         v4: :boolean,
         v6: :boolean,
         help: :boolean,
         write: :string,
         write_request: :string,
         read: :string,
+        version: :boolean,
       ],
       aliases: [
         c: :class,
         t: :type,
         p: :port,
+        x: :ptr,
         h: :help,
         w: :write,
         r: :read,
         f: :read,
+        v: :version,
       ])
     |> parse_switches
     |> parse_argv
@@ -135,14 +139,22 @@ defmodule Tdig.CLI do
     %{help: true, exit_code: 0}
   end
 
-  def check_args(%{name: nil, read: nil}) do
+  def check_args(%{name: nil, read: nil, version: nil}) do
     %{help: true, exit_code: 1}
   end
 
+  def check_args(%{ptr: true} = args) do
+    args
+    |> Map.put(:name, (args[:name] |> String.split(".") |> Enum.reverse |> tl |> Enum.join(".")) <> ".in-addr.arpa.")
+    |> Map.put(:type, :ptr)
+  end
+      
   def check_args(arg) do
     arg
   end
 
+  def process(%{version: true}), do: IO.puts "tdig 0.1.0 (tenbin_dns 0.2.1)"
+  
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
     Usage: tdig [options] [@server] host [type] [class]
@@ -158,6 +170,9 @@ defmodule Tdig.CLI do
     -f        <file>          same as -r
     -w --write <file>         write answer packet to file
        --write-request <file> write request packet to file
+    -v --version              print version
+    -h --help                 print help and exit
+    """
     System.halt(exit_code)
   end
 
