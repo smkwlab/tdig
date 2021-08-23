@@ -115,7 +115,7 @@ defmodule Tdig.CLI do
   end
     
   def switch_to_arg([{k, v} | list], result) do
-    switch_to_arg(list,  Map.put(result, k, v))
+    switch_to_arg(list,  result |> Map.put(k, v))
   end
 
   def add_default(arg, key, value) do
@@ -145,19 +145,19 @@ defmodule Tdig.CLI do
 
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
-Usage: tdig [options] [@server] host [type] [class]
-
-options
- -c --class <class>        specify query class
- -t --type <type>          specify query type
- -p --port <port>          specify port number
-    --v4                   use IPv4 transport
-    --v6                   use IPv6 transport
- -r --read <file>          read packet from file
- -w --write <file>         write answer packet to file
-    --write-request <file> write request packet to file
- -h --help                 print help and exit
-"""
+    Usage: tdig [options] [@server] host [type] [class]
+    
+    options
+    -c --class <class>        specify query class
+    -t --type <type>          specify query type
+    -p --port <port>          specify port number
+    -x --ptr                  shortcut for reverse lookup
+       --v4                   use IPv4 transport
+       --v6                   use IPv6 transport
+    -r --read <file>          read packet from file
+    -f        <file>          same as -r
+    -w --write <file>         write answer packet to file
+       --write-request <file> write request packet to file
     System.halt(exit_code)
   end
 

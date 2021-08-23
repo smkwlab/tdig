@@ -37,11 +37,9 @@ defmodule Tdig do
     |> String.to_charlist
     |> :inet.getaddr(family)
 
-    socket
-    |> Socket.Datagram.send(packet, {server, arg.port})
-
-    socket 
-    |> Socket.Datagram.recv!
+    
+    Socket.Datagram.send(socket, packet, {server, arg.port})
+    Socket.Datagram.recv!(socket)
   end
 
   def get_response(arg) do
@@ -53,12 +51,12 @@ defmodule Tdig do
   end
       
   def write_file({packet, _} = result, file) do
-    :ok = file |> File.write(packet)
+    :ok = File.write(file, packet)
     result
   end
 
   def write_file(packet, file) do
-    :ok = file |> File.write(packet)
+    :ok = File.write(file, packet)
     packet
   end
 
@@ -75,7 +73,7 @@ defmodule Tdig do
     |> disp_answer(:authority)
     |> disp_answer(:additional)
 
-    disp_tailer(server |> :inet.ntoa |> to_string, port, response |> byte_size, finish - start)
+    disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), finish - start)
   end
 
   defp qr(0), do: " q"
@@ -132,21 +130,21 @@ defmodule Tdig do
   def disp_question(p) do
     IO.puts ";; QUESTION SECTION:"
     p.question
-    |> Enum.map(fn n -> n |> question_item_to_string end)
-    |> Enum.each(fn n -> n |> IO.puts end)
+    |> Enum.map(fn n -> question_item_to_string(n) end)
+    |> Enum.each(fn n -> IO.puts(n) end)
     IO.puts ""
     p
   end
 
   def question_item_to_string(q) do
-    ";#{q.qname}			#{q.qclass|>a2s}	#{q.qtype|>a2s}"
+    ";#{q.qname}			#{q.qclass |> a2s}	#{q.qtype |> a2s}"
   end
   
   def disp_answer(p, part) do
     IO.puts ";; #{a2s(part)} SECTION:"
     p[part]
-    |> Enum.map(fn n-> n |> answer_item_to_string end)
-    |> Enum.each(fn n -> n |> IO.write end)
+    |> Enum.map(fn n-> answer_item_to_string(n) end)
+    |> Enum.each(fn n -> IO.write(n) end)
     IO.puts ""
     p
   end
@@ -154,32 +152,30 @@ defmodule Tdig do
   # Do not display OPT item in answer
   def answer_item_to_string(%{type: :opt}), do: ""
 
-  def answer_item_to_string(a) do
+  def answer_item_to_string(a) do """
+    #{a.name}		#{a.ttl}	#{a.class|>a2s}	#{a.type|>a2s}	#{a.rdata|>rdata_to_string(a.type)}
     """
-#{a.name}		#{a.ttl}	#{a.class|>a2s}	#{a.type|>a2s}	#{a.rdata|>rdata_to_string(a.type)}
-"""
   end
 
-  def rdata_to_string(rdata, :a), do: rdata.addr |> :inet.ntoa
-  def rdata_to_string(rdata, :aaaa), do: rdata.addr |> :inet.ntoa
+  def rdata_to_string(rdata, :a), do: :inet.ntoa(rdata.addr)
+  def rdata_to_string(rdata, :aaaa), do: :inet.ntoa(rdata.addr)
   def rdata_to_string(rdata, :ns), do: rdata.name
-  def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{rdata.name}"
-  def rdata_to_string(rdata, :txt), do: rdata.txt
-  def rdata_to_string(rdata, :caa), do: "#{rdata.flag} #{rdata.tag} #{rdata.value}"
   def rdata_to_string(rdata, :cname), do: rdata.name
+  def rdata_to_string(rdata, :txt), do: rdata.txt
+  def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{rdata.name}"
+  def rdata_to_string(rdata, :caa), do: "#{rdata.flag} #{rdata.tag} #{rdata.value}"
 
-  def rdata_to_string(rdata, :soa) do
-    "#{rdata.mname} #{rdata.rname} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
-  end
+  def rdata_to_string(rdata, :soa),
+    do: "#{rdata.mname} #{rdata.rname} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
 
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
     IO.puts """
-;; Query time: #{time} ms
-;; SERVER: #{server}##{port}(#{server})
-;; WHEN: #{DateTime.now!("Asia/Tokyo") |> DateTime.to_string}
-;; MSG SIZE rcvd: #{size}
-"""
+    ;; Query time: #{time} ms
+    ;; SERVER: #{server}##{port}(#{server})
+    ;; WHEN: #{"Asia/Tokyo" |> DateTime.now! |> DateTime.to_string}
+    ;; MSG SIZE rcvd: #{size}
+    """
   end
 end
