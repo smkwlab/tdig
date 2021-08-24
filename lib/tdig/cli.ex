@@ -19,6 +19,7 @@ defmodule Tdig.CLI do
         type: :string,
         port: :integer,
         ptr: :boolean,
+        tcp: :boolean,
         v4: :boolean,
         v6: :boolean,
         help: :boolean,
@@ -166,11 +167,12 @@ defmodule Tdig.CLI do
     -x --ptr                  shortcut for reverse lookup
        --v4                   use IPv4 transport
        --v6                   use IPv6 transport
+       --tcp                  TCP mode
     -r --read <file>          read packet from file
     -f        <file>          same as -r
     -w --write <file>         write answer packet to file
        --write-request <file> write request packet to file
-    -v --version              print version
+    -v --version              print version and exit
     -h --help                 print help and exit
     """
     System.halt(exit_code)

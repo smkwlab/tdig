@@ -13,7 +13,7 @@ defmodule Tdig do
   end
 
   def get_response(%{read: nil} = arg) do
-    packet = %{
+    %{
       id: :rand.uniform(0xffff),
       flags: 0x0100,
       question: [
@@ -29,21 +29,36 @@ defmodule Tdig do
     }
     |> DNSpacket.create
     |> write_file(arg.write_request)
-
-    {family, version} = select_protocol(arg.v4, arg.v6)
-    socket = Socket.UDP.open!([version: version])
-
-    {:ok, server} = arg.server
-    |> String.to_charlist
-    |> :inet.getaddr(family)
-
-    
-    Socket.Datagram.send(socket, packet, {server, arg.port})
-    Socket.Datagram.recv!(socket)
+    |> send_server(arg)
   end
 
   def get_response(arg) do
     {File.read!(arg.read), {{0,0,0,0}, "  '#{arg.read}'  "}}
+  end
+
+  def send_server(packet, %{tcp: true} = arg) do
+    {family, version} = select_protocol(arg.v4, arg.v6)
+    {:ok, socket} = Socket.TCP.connect(arg.server, arg.port, [version: version])
+
+    :ok = Socket.Stream.send(socket, <<byte_size(packet)::16>> <> packet)
+    {:ok, <<length::16>>} = Socket.Stream.recv(socket, 2)
+    {:ok, <<response::binary-size(length)>>} = Socket.Stream.recv(socket, length)
+    Socket.close(socket)
+
+    {:ok, server} =
+      arg.server
+      |> String.to_charlist
+      |> :inet.getaddr(family)
+
+    {response, {server, arg.port}}
+  end
+
+  def send_server(packet, arg) do
+    {_, version} = select_protocol(arg.v4, arg.v6)
+    socket = Socket.UDP.open!([version: version])
+
+    :ok = Socket.Datagram.send(socket, packet, {arg.server, arg.port})
+    Socket.Datagram.recv!(socket)
   end
 
   def write_file(packet, nil) do
@@ -101,9 +116,9 @@ defmodule Tdig do
 
   def disp_header(p) do
     IO.puts """
-;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
-;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
-"""
+    ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
+    ;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
+    """
     p
   end
 
@@ -117,6 +132,7 @@ defmodule Tdig do
     p.additional
     |> Enum.filter(fn n -> n.type == :opt end)
     |> disp_edns_pseudo_item
+
     p
   end
   
@@ -129,9 +145,11 @@ defmodule Tdig do
 
   def disp_question(p) do
     IO.puts ";; QUESTION SECTION:"
+
     p.question
     |> Enum.map(fn n -> question_item_to_string(n) end)
     |> Enum.each(fn n -> IO.puts(n) end)
+
     IO.puts ""
     p
   end
@@ -142,9 +160,11 @@ defmodule Tdig do
   
   def disp_answer(p, part) do
     IO.puts ";; #{a2s(part)} SECTION:"
+
     p[part]
     |> Enum.map(fn n-> answer_item_to_string(n) end)
     |> Enum.each(fn n -> IO.write(n) end)
+
     IO.puts ""
     p
   end
