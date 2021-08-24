@@ -51,6 +51,7 @@ defmodule Tdig.CLI do
     |> add_default(:read, nil)
     |> add_default(:write, nil)
     |> add_default(:write_request, nil)
+    |> check_server_address
     |> check_args
  end
 
@@ -112,6 +113,16 @@ defmodule Tdig.CLI do
   def add_default_item(arg, nil, key, value), do: Map.put(arg, key, value)
   def add_default_item(arg, _, _, _), do: arg
 
+  def check_server_address(arg) do
+    case arg.server |> String.to_charlist |> :inet.parse_address do
+      {:ok, address} ->
+        case tuple_size(address) do
+          4 -> arg |> Map.put(:v4, true) |> Map.put(:v6, false)
+          8 -> arg |> Map.put(:v4, false) |> Map.put(:v6, true)
+        end
+      _ ->
+        arg
+    end
   end
 
   def check_args(%{help: true}), do: %{help: true, exit_code: 0}
