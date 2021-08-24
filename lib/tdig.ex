@@ -12,7 +12,10 @@ defmodule Tdig do
     |> disp_response(start, System.monotonic_time(:millisecond))
   end
 
-  def get_response(%{read: nil} = arg) do
+  def get_response(%{read: file}) when is_binary(file),
+    do: {File.read!(file), {{0,0,0,0}, "  '#{file}'  "}}
+
+  def get_response(arg) do
     %{
       id: :rand.uniform(0xffff),
       flags: 0x0100,
@@ -30,10 +33,6 @@ defmodule Tdig do
     |> DNSpacket.create
     |> write_file(arg.write_request)
     |> send_server(arg)
-  end
-
-  def get_response(arg) do
-    {File.read!(arg.read), {{0,0,0,0}, "  '#{arg.read}'  "}}
   end
 
   def send_server(packet, %{tcp: true} = arg) do
