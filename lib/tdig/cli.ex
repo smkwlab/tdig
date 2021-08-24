@@ -54,25 +54,14 @@ defmodule Tdig.CLI do
     |> check_args
  end
 
-  def parse_switches({parsed, argv, errors}) do
-    {Enum.map(parsed, fn n -> switch_convert_atom(n) end), argv, errors}
-  end
+  def parse_switches({parsed, argv, errors}),
+    do: {Enum.map(parsed, &(switch_convert_atom(&1))), argv, errors}
 
-  def switch_convert_atom({:class, value}) do
-    {:class, value |> str2atom}
-  end
+  def switch_convert_atom({:class, value}), do: {:class, str2atom(value)}
+  def switch_convert_atom({:type, value}), do: {:type, str2atom(value)}
+  def switch_convert_atom(n), do: n
 
-  def switch_convert_atom({:type, value}) do
-    {:type, value |> str2atom}
-  end
-
-  def switch_convert_atom(n) do
-    n
-  end
-
-  def str2atom(arg) do
-    arg |> String.downcase |> String.to_atom
-  end
+  def str2atom(arg), do: arg |> String.downcase |> String.to_atom
 
   def parse_argv({parsed, argv, errors}) do
     {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
@@ -115,34 +104,18 @@ defmodule Tdig.CLI do
     switch_to_arg(parsed, argv)
   end
 
-  def switch_to_arg([], result) do
-    result
-  end
-    
-  def switch_to_arg([{k, v} | list], result) do
-    switch_to_arg(list,  result |> Map.put(k, v))
+  def switch_to_arg([], result), do: result
+  def switch_to_arg([{k, v} | list], result), do: switch_to_arg(list,  result |> Map.put(k, v))
+
+  def add_default(arg, key, value), do: add_default_item(arg, arg[key], key, value)
+
+  def add_default_item(arg, nil, key, value), do: Map.put(arg, key, value)
+  def add_default_item(arg, _, _, _), do: arg
+
   end
 
-  def add_default(arg, key, value) do
-    add_default_item(arg, arg[key], key, value)
-  end
-
-  def add_default_item(arg, nil, key, value) do
-    arg
-    |> Map.put(key, value)
-  end
-
-  def add_default_item(arg, _, _, _) do
-    arg
-  end
-
-  def check_args(%{help: true}) do
-    %{help: true, exit_code: 0}
-  end
-
-  def check_args(%{name: nil, read: nil, version: nil}) do
-    %{help: true, exit_code: 1}
-  end
+  def check_args(%{help: true}), do: %{help: true, exit_code: 0}
+  def check_args(%{name: nil, read: nil, version: nil}), do: %{help: true, exit_code: 1}
 
   def check_args(%{ptr: true} = args) do
     args
