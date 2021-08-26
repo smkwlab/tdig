@@ -19,6 +19,8 @@ defmodule Tdig.CLI do
         type: :string,
         port: :integer,
         ptr: :boolean,
+        edns: :boolean,
+        bufsize: :integer,
         tcp: :boolean,
         v4: :boolean,
         v6: :boolean,
@@ -33,6 +35,8 @@ defmodule Tdig.CLI do
         t: :type,
         p: :port,
         x: :ptr,
+        e: :edns,
+        b: :bufsize,
         h: :help,
         w: :write,
         r: :read,
@@ -48,31 +52,23 @@ defmodule Tdig.CLI do
     |> add_default(:port, 53)
     |> add_default(:type, :a)
     |> add_default(:class, :in)
+    |> add_default(:edns, false)
     |> add_default(:read, nil)
     |> add_default(:write, nil)
     |> add_default(:write_request, nil)
+    |> check_server_address
+    |> check_edns
     |> check_args
  end
 
-  def parse_switches({parsed, argv, errors}) do
-    {Enum.map(parsed, fn n -> switch_convert_atom(n) end), argv, errors}
-  end
+  def parse_switches({parsed, argv, errors}),
+    do: {Enum.map(parsed, &(switch_convert_atom(&1))), argv, errors}
 
-  def switch_convert_atom({:class, value}) do
-    {:class, value |> str2atom}
-  end
+  def switch_convert_atom({:class, value}), do: {:class, str2atom(value)}
+  def switch_convert_atom({:type, value}), do: {:type, str2atom(value)}
+  def switch_convert_atom(n), do: n
 
-  def switch_convert_atom({:type, value}) do
-    {:type, value |> str2atom}
-  end
-
-  def switch_convert_atom(n) do
-    n
-  end
-
-  def str2atom(arg) do
-    arg |> String.downcase |> String.to_atom
-  end
+  def str2atom(arg), do: arg |> String.downcase |> String.to_atom
 
   def parse_argv({parsed, argv, errors}) do
     {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
@@ -115,34 +111,44 @@ defmodule Tdig.CLI do
     switch_to_arg(parsed, argv)
   end
 
-  def switch_to_arg([], result) do
-    result
-  end
-    
-  def switch_to_arg([{k, v} | list], result) do
-    switch_to_arg(list,  result |> Map.put(k, v))
+  def switch_to_arg([], result), do: result
+  def switch_to_arg([{k, v} | list], result), do: switch_to_arg(list,  result |> Map.put(k, v))
+
+  def add_default(arg, key, value), do: add_default_item(arg, arg[key], key, value)
+
+  def add_default_item(arg, nil, key, value), do: Map.put(arg, key, value)
+  def add_default_item(arg, _, _, _), do: arg
+
+  def check_server_address(arg) do
+    case arg.server |> String.to_charlist |> :inet.parse_address do
+      {:ok, address} ->
+        case tuple_size(address) do
+          4 -> arg |> Map.put(:v4, true) |> Map.put(:v6, false)
+          8 -> arg |> Map.put(:v4, false) |> Map.put(:v6, true)
+        end
+      _ ->
+        arg
+    end
   end
 
-  def add_default(arg, key, value) do
-    add_default_item(arg, arg[key], key, value)
-  end
+  def check_edns(%{bufsize: size} = arg) when is_integer(size), do: mk_edns(arg)
+  def check_edns(%{edns: false} = arg), do: arg
 
-  def add_default_item(arg, nil, key, value) do
+  def check_edns(arg) do
     arg
-    |> Map.put(key, value)
+    |> Map.put(:bufsize, DNS.edns_max_udpsize)
+    |> mk_edns
   end
 
-  def add_default_item(arg, _, _, _) do
+  def mk_edns(arg) do
     arg
+    |> Map.put(:edns, true)
+    |> Map.put(:ex_rcode, 0)
+    |> Map.put(:options, [])
   end
 
-  def check_args(%{help: true}) do
-    %{help: true, exit_code: 0}
-  end
-
-  def check_args(%{name: nil, read: nil, version: nil}) do
-    %{help: true, exit_code: 1}
-  end
+  def check_args(%{help: true}), do: %{help: true, exit_code: 0}
+  def check_args(%{name: nil, read: nil, version: nil}), do: %{help: true, exit_code: 1}
 
   def check_args(%{ptr: true} = args) do
     args
@@ -168,6 +174,8 @@ defmodule Tdig.CLI do
        --v4                   use IPv4 transport
        --v6                   use IPv6 transport
        --tcp                  TCP mode
+    -e --edns                 use EDNS0
+    -b --bufsize <size>       set EDNS0 Max UDP packet size
     -r --read <file>          read packet from file
     -f        <file>          same as -r
     -w --write <file>         write answer packet to file

@@ -5,7 +5,7 @@ defmodule Tdig.MixProject do
     [
       app: :tdig,
       escript: escript_config(),
-      version: "0.1.0",
+      version: "0.1.1",
       name: "Tdig",
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
@@ -23,7 +23,7 @@ defmodule Tdig.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:tenbin_dns, git: "https://github.com/toshi0806/tenbin_dns.git", tag: "0.2.2"},
+      {:tenbin_dns, git: "https://github.com/toshi0806/tenbin_dns.git", tag: "0.2.3"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
     ]
