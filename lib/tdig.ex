@@ -28,11 +28,28 @@ defmodule Tdig do
       ],
       answer: [],
       authority: [],
-      additional: [],
+      additional: check_edns(arg),
     }
     |> DNSpacket.create
     |> write_file(arg.write_request)
     |> send_server(arg)
+  end
+
+  def check_edns(%{edns: false}), do: []
+
+  # FIXME
+  def check_edns(arg) do
+    [
+      %{
+        type: :opt,
+        bufsize: arg.bufsize,
+        ex_rcode: arg.ex_rcode,
+        version: 0,
+        dnssec: 0,
+        z: 0,
+        options: arg.options,
+      }
+    ]
   end
 
   def send_server(packet, %{tcp: true} = arg) do
@@ -81,7 +98,7 @@ defmodule Tdig do
     response
     |> DNSpacket.parse
     |> disp_header
-    |> disp_edns_pseudo
+    |> disp_edns_pseudo_header
     |> disp_question
     |> disp_answer(:answer)
     |> disp_answer(:authority)
@@ -118,6 +135,7 @@ defmodule Tdig do
     ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
     ;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
     """
+
     p
   end
 
@@ -127,20 +145,57 @@ defmodule Tdig do
     |> String.upcase
   end
 
-  def disp_edns_pseudo(p) do
+  def disp_edns_pseudo_header(p) do
     p.additional
     |> Enum.filter(fn n -> n.type == :opt end)
-    |> disp_edns_pseudo_item
+    |> disp_edns_opt_record
 
     p
   end
   
-  def disp_edns_pseudo_item([]), do: nil
+  def disp_edns_opt_record([]), do: nil
 
-  def disp_edns_pseudo_item([%{type: :opt} = p]) do
-    IO.puts ";; OPT PSEUDOSECTION:"
-    IO.puts "; EDNS: version: #{p.version}, flags:; udp: #{p.payload_size}"
+  def disp_edns_opt_record([%{type: :opt} = p]) do
+    IO.write """
+    ;; OPT PSEUDOSECTION:
+    ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
+    """
+
+    disp_edns_options(p.rdata)
   end
+
+  defp dnssec(0), do: ""
+  defp dnssec(1), do: " do"
+
+  def disp_ends_options([]), do: nil
+
+  defp disp_edns_options(options) do
+    options
+    |> Enum.each(fn n -> disp_edns_option_item(n) end)
+  end
+
+  defp disp_edns_option_item(%{code: :edns_client_subnet} = opt) do
+    IO.puts """
+    ; EDNS: ECS: #{complete_addr(opt)}/#{opt.source}, #{opt.scope}
+    """
+  end
+
+  defp disp_edns_option_item(opt) do
+    IO.inspect opt
+  end
+
+  def complete_addr(%{family: 1, source: source} = opt) do
+    padding_length = 32 - source
+    <<a1::8,a2::8,a3::8,a4::8>> = opt.addr <> <<0::size(padding_length)>>
+    "#{:inet.ntoa({a1, a2, a3, a4})}"
+  end
+
+  def complete_addr(%{family: 2, source: source} = opt) do
+    padding_length = 128 - source
+    <<a1::16,a2::16,a3::16,a4::16,a5::16,a6::16,a7::16,a8::16>> = opt.addr <> <<0::size(padding_length)>>
+    "#{:inet.ntoa({a1,a2,a3,a4,a5,a6,a7,a8})}"
+  end
+
 
   def disp_question(p) do
     IO.puts ";; QUESTION SECTION:"

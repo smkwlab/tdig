@@ -19,6 +19,8 @@ defmodule Tdig.CLI do
         type: :string,
         port: :integer,
         ptr: :boolean,
+        edns: :boolean,
+        bufsize: :integer,
         tcp: :boolean,
         v4: :boolean,
         v6: :boolean,
@@ -33,6 +35,8 @@ defmodule Tdig.CLI do
         t: :type,
         p: :port,
         x: :ptr,
+        e: :edns,
+        b: :bufsize,
         h: :help,
         w: :write,
         r: :read,
@@ -48,10 +52,12 @@ defmodule Tdig.CLI do
     |> add_default(:port, 53)
     |> add_default(:type, :a)
     |> add_default(:class, :in)
+    |> add_default(:edns, false)
     |> add_default(:read, nil)
     |> add_default(:write, nil)
     |> add_default(:write_request, nil)
     |> check_server_address
+    |> check_edns
     |> check_args
  end
 
@@ -125,6 +131,22 @@ defmodule Tdig.CLI do
     end
   end
 
+  def check_edns(%{bufsize: size} = arg) when is_integer(size), do: mk_edns(arg)
+  def check_edns(%{edns: false} = arg), do: arg
+
+  def check_edns(arg) do
+    arg
+    |> Map.put(:bufsize, DNS.edns_max_udpsize)
+    |> mk_edns
+  end
+
+  def mk_edns(arg) do
+    arg
+    |> Map.put(:edns, true)
+    |> Map.put(:ex_rcode, 0)
+    |> Map.put(:options, [])
+  end
+
   def check_args(%{help: true}), do: %{help: true, exit_code: 0}
   def check_args(%{name: nil, read: nil, version: nil}), do: %{help: true, exit_code: 1}
 
@@ -152,6 +174,8 @@ defmodule Tdig.CLI do
        --v4                   use IPv4 transport
        --v6                   use IPv6 transport
        --tcp                  TCP mode
+    -e --edns                 use EDNS0
+    -b --bufsize <size>       set EDNS0 Max UDP packet size
     -r --read <file>          read packet from file
     -f        <file>          same as -r
     -w --write <file>         write answer packet to file
