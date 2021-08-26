@@ -160,7 +160,7 @@ defmodule Tdig.CLI do
     arg
   end
 
-  def process(%{version: true}), do: IO.puts "tdig 0.1.0 (tenbin_dns 0.2.1)"
+  def process(%{version: true}), do: IO.puts "tdig 0.1.1 (tenbin_dns 0.2.3)"
   
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
