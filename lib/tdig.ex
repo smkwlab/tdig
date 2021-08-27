@@ -9,7 +9,7 @@ defmodule Tdig do
     arg
     |> get_response
     |> write_file(arg.write)
-    |> disp_response(start, System.monotonic_time(:millisecond))
+    |> disp_response(arg, System.monotonic_time(:millisecond) - start)
   end
 
   def get_response(%{read: file}) when is_binary(file),
@@ -94,9 +94,10 @@ defmodule Tdig do
   def select_protocol(_, true), do: {:inet6, 6}
   def select_protocol(_, _),    do: {:inet, 4}
 
-  def disp_response({response, {server, port}}, start, finish) do
+  def disp_response({response, {server, port}}, arg, period) do
     response
     |> DNSpacket.parse
+    |> check_tc_flag(arg)
     |> disp_header
     |> disp_edns_pseudo_header
     |> disp_question
@@ -104,7 +105,20 @@ defmodule Tdig do
     |> disp_answer(:authority)
     |> disp_answer(:additional)
 
-    disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), finish - start)
+    disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), period)
+  end
+
+  def check_tc_flag(%{tc: 1}, %{ignore: false} = arg) do
+    IO.puts """
+    ;; Truncated, retrying in TCP mode.
+    """
+    
+    resolve(Map.put(arg, :tcp, true))
+    System.halt(0)
+  end
+
+  def check_tc_flag(response, _) do
+    response
   end
 
   defp qr(0), do: " q"

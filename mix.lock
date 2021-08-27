@@ -1,5 +1,5 @@
 %{
   "socket": {:hex, :socket, "0.3.13", "98a2ab20ce17f95fb512c5cadddba32b57273e0d2dba2d2e5f976c5969d0c632", [:mix], [], "hexpm", "f82ea9833ef49dde272e6568ab8aac657a636acb4cf44a7de8a935acb8957c2e"},
-  "tenbin_dns": {:git, "https://github.com/toshi0806/tenbin_dns.git", "a64026b8d51628273822df4f1cc7f7b62fdc0171", [tag: "0.2.1"]},
+  "tenbin_dns": {:git, "https://github.com/toshi0806/tenbin_dns.git", "0c5aafda49f0f274d354af1393aa8bb08a195ee5", [tag: "0.2.3"]},
   "zoneinfo": {:hex, :zoneinfo, "0.1.4", "45993b51504a8b0bf0104879a9905776f5ccece99f8389cee34ff203e9f2eca0", [:mix], [], "hexpm", "3725fe8966a3fb3830c596f646c35bae21e79495098dc8f9077531d1baf272db"},
 }
