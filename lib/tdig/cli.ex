@@ -19,6 +19,7 @@ defmodule Tdig.CLI do
         type: :string,
         port: :integer,
         ptr: :boolean,
+        ignore: :boolean,
         edns: :boolean,
         bufsize: :integer,
         tcp: :boolean,
@@ -52,6 +53,7 @@ defmodule Tdig.CLI do
     |> add_default(:port, 53)
     |> add_default(:type, :a)
     |> add_default(:class, :in)
+    |> add_default(:ignore, false)
     |> add_default(:edns, false)
     |> add_default(:read, nil)
     |> add_default(:write, nil)
@@ -174,6 +176,7 @@ defmodule Tdig.CLI do
        --v4                   use IPv4 transport
        --v6                   use IPv6 transport
        --tcp                  TCP mode
+       --ignore               Don't revert to TCP for TC responses
     -e --edns                 use EDNS0
     -b --bufsize <size>       set EDNS0 Max UDP packet size
     -r --read <file>          read packet from file
