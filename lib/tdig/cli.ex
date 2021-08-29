@@ -25,6 +25,7 @@ defmodule Tdig.CLI do
         tcp: :boolean,
         v4: :boolean,
         v6: :boolean,
+        sort: :boolean,
         help: :boolean,
         write: :string,
         write_request: :string,
@@ -38,6 +39,7 @@ defmodule Tdig.CLI do
         x: :ptr,
         e: :edns,
         b: :bufsize,
+        s: :sort,
         h: :help,
         w: :write,
         r: :read,
@@ -174,6 +176,7 @@ defmodule Tdig.CLI do
        --ignore               Don't revert to TCP for TC responses
     -e --edns                 use EDNS0
     -b --bufsize <size>       set EDNS0 Max UDP packet size
+    -s --sort                 sort RRs
     -r --read <file>          read packet from file
     -f        <file>          same as -r
     -w --write <file>         write answer packet to file
