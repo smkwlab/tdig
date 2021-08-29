@@ -47,12 +47,12 @@ defmodule Tdig.CLI do
     |> parse_switches
     |> parse_argv
     |> merge_switches_and_argv
-    |> Map.put_new(:server, "8.8.8.8")
+    |> Map.update(:server, nil, fn n -> n || "8.8.8.8" end)
+    |> Map.update(:type,   nil, fn n -> n || :a end)
+    |> Map.update(:class,  nil, fn n -> n || :in end)
     |> Map.put_new(:v4, true)
     |> Map.put_new(:v6, false)
     |> Map.put_new(:port, 53)
-    |> Map.put_new(:type, :a)
-    |> Map.put_new(:class, :in)
     |> Map.put_new(:ignore, false)
     |> Map.put_new(:edns, false)
     |> Map.put_new(:read, nil)
