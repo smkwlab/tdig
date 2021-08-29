@@ -101,9 +101,9 @@ defmodule Tdig do
     |> disp_header
     |> disp_edns_pseudo_header
     |> disp_question
-    |> disp_answer(:answer)
-    |> disp_answer(:authority)
-    |> disp_answer(:additional)
+    |> disp_answer(:answer, arg[:sort])
+    |> disp_answer(:authority, arg[:sort])
+    |> disp_answer(:additional, arg[:sort])
 
     disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), period)
   end
@@ -226,16 +226,23 @@ defmodule Tdig do
     ";#{q.qname}			#{q.qclass |> a2s}	#{q.qtype |> a2s}"
   end
   
-  def disp_answer(p, part) do
+  def disp_answer(p, part, is_sort) do
     IO.puts ";; #{a2s(part)} SECTION:"
 
     p[part]
+    |> sort_answer(is_sort)
     |> Enum.map(fn n-> answer_item_to_string(n) end)
     |> Enum.each(fn n -> IO.write(n) end)
 
     IO.puts ""
     p
   end
+
+  def sort_answer(p, true) do
+    Enum.sort(p, fn x, y -> x.type < y.type end)
+  end
+
+  def sort_answer(p, _), do: p
 
   # Do not display OPT item in answer
   def answer_item_to_string(%{type: :opt}), do: ""
