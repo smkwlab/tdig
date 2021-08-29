@@ -47,17 +47,17 @@ defmodule Tdig.CLI do
     |> parse_switches
     |> parse_argv
     |> merge_switches_and_argv
-    |> add_default(:server, "8.8.8.8")
-    |> add_default(:v4, true)
-    |> add_default(:v6, false)
-    |> add_default(:port, 53)
-    |> add_default(:type, :a)
-    |> add_default(:class, :in)
-    |> add_default(:ignore, false)
-    |> add_default(:edns, false)
-    |> add_default(:read, nil)
-    |> add_default(:write, nil)
-    |> add_default(:write_request, nil)
+    |> Map.put_new(:server, "8.8.8.8")
+    |> Map.put_new(:v4, true)
+    |> Map.put_new(:v6, false)
+    |> Map.put_new(:port, 53)
+    |> Map.put_new(:type, :a)
+    |> Map.put_new(:class, :in)
+    |> Map.put_new(:ignore, false)
+    |> Map.put_new(:edns, false)
+    |> Map.put_new(:read, nil)
+    |> Map.put_new(:write, nil)
+    |> Map.put_new(:write_request, nil)
     |> check_server_address
     |> check_edns
     |> check_args
@@ -115,11 +115,6 @@ defmodule Tdig.CLI do
 
   def switch_to_arg([], result), do: result
   def switch_to_arg([{k, v} | list], result), do: switch_to_arg(list,  result |> Map.put(k, v))
-
-  def add_default(arg, key, value), do: add_default_item(arg, arg[key], key, value)
-
-  def add_default_item(arg, nil, key, value), do: Map.put(arg, key, value)
-  def add_default_item(arg, _, _, _), do: arg
 
   def check_server_address(arg) do
     case arg.server |> String.to_charlist |> :inet.parse_address do
