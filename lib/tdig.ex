@@ -16,9 +16,9 @@ defmodule Tdig do
     do: {File.read!(file), {{0,0,0,0}, "  '#{file}'  "}}
 
   def get_response(arg) do
-    %{
+    %DNSpacket{
       id: :rand.uniform(0xffff),
-      flags: 0x0100,
+      rd: 1,
       question: [
         %{
           qname: arg.name,
@@ -26,8 +26,6 @@ defmodule Tdig do
           qclass: arg.class,
         }
       ],
-      answer: [],
-      authority: [],
       additional: check_edns(arg),
     }
     |> DNSpacket.create
