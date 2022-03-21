@@ -1,10 +1,12 @@
 defmodule Tdig.CLI do
+  use Bakeware.Script
+
   require Logger
 
   @moduledoc """
   
   """
-
+  @impl Bakeware.Script
   def main(argv) do
     argv
     |> parse_args
@@ -159,7 +161,7 @@ defmodule Tdig.CLI do
     arg
   end
 
-  def process(%{version: true}), do: IO.puts "tdig 0.2.0 (tenbin_dns 0.3.0)"
+  def process(%{version: true}), do: IO.puts "tdig 0.3.0 (tenbin_dns 0.3.0)"
   
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
