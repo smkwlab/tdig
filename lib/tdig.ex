@@ -227,7 +227,11 @@ defmodule Tdig do
   def disp_answer(p, part, is_sort) do
     IO.puts ";; #{a2s(part)} SECTION:"
 
-    p[part]
+    case part do
+      :answer -> p.answer
+      :authority -> p.authority
+      :additional -> p.additional
+    end
     |> sort_answer(is_sort)
     |> Enum.map(fn n-> answer_item_to_string(n) end)
     |> Enum.each(fn n -> IO.write(n) end)
