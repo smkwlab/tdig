@@ -28,7 +28,7 @@ defmodule Tdig.MixProject do
   defp deps do
     [
       {:bakeware, "~> 0.2.3", runtime: false},
-      {:tenbin_dns, git: "https://github.com/toshi0806/tenbin_dns.git", tag: "0.3.0"},
+      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.3.4"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
     ]
