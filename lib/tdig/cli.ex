@@ -80,24 +80,28 @@ defmodule Tdig.CLI do
     {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
   end
 
+  def parse_argv_item([], %{name: nil} = result) do
+    parse_argv_item([], %{result | name: "."})
+  end
+  
   def parse_argv_item([], result) do
     result
   end
 
   def parse_argv_item([<<"@",arg1::binary>> | argv], result) do
-    argv |> parse_argv_item(%{result | server: arg1})
+    parse_argv_item(argv, %{result | server: arg1})
   end
 
   def parse_argv_item([arg1 | argv], %{name: nil} = result) do
-    argv |> parse_argv_item(%{result | name: arg1 |> add_tail_dot})
+    parse_argv_item(argv, %{result | name: arg1 |> add_tail_dot})
   end
 
   def parse_argv_item([arg1 | argv], %{type: nil} = result) do
-    argv |> parse_argv_item(%{result | type: arg1 |> str2atom})
+    parse_argv_item(argv, %{result | type: arg1 |> str2atom})
   end
 
   def parse_argv_item([arg1 | argv], %{class: nil} = result) do
-    argv |> parse_argv_item(%{result | class: arg1 |> str2atom})
+    parse_argv_item(argv, %{result | class: arg1 |> str2atom})
   end
 
   def parse_argv_item(_, _) do
@@ -161,7 +165,7 @@ defmodule Tdig.CLI do
     arg
   end
 
-  def process(%{version: true}), do: IO.puts "tdig 0.3.0 (tenbin_dns 0.3.0)"
+  def process(%{version: true}), do: IO.puts "tdig 0.3.1 (tenbin_dns 0.3.4)"
   
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts """
