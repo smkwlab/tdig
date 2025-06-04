@@ -31,7 +31,6 @@ defmodule Tdig do
     |> DNSpacket.create
     |> write_file(arg.write_request)
     |> send_server(arg)
-    |> dbg
   end
 
   def check_edns(%{edns: false}), do: []
@@ -103,7 +102,6 @@ defmodule Tdig do
     |> disp_answer(:answer, arg[:sort])
     |> disp_answer(:authority, arg[:sort])
     |> disp_answer(:additional, arg[:sort])
-    |> dbg
 
     disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), period)
   end
@@ -175,7 +173,6 @@ defmodule Tdig do
     ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
     """
 
-    IO.inspect(p, label: :edns)
 
     disp_edns_options(p.rdata)
   end
@@ -219,7 +216,6 @@ defmodule Tdig do
     p.question
     |> Enum.map(fn n -> question_item_to_string(n) end)
     |> Enum.each(fn n -> IO.puts(n) end)
-    |> dbg
 
     IO.puts ""
     p

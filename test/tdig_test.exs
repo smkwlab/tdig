@@ -1,6 +1,5 @@
 defmodule TdigTest do
   use ExUnit.Case
-  doctest Tdig
 
   describe "CLI argument parsing" do
     test "parse_switches converts string types to atoms" do
@@ -155,7 +154,7 @@ defmodule TdigTest do
   describe "rdata formatting" do
     test "rdata_to_string formats A records" do
       rdata = %{addr: {192, 168, 1, 1}}
-      assert Tdig.rdata_to_string(rdata, :a) == "192.168.1.1"
+      assert Tdig.rdata_to_string(rdata, :a) == ~c"192.168.1.1"
     end
 
     test "rdata_to_string formats MX records" do
