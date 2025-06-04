@@ -31,6 +31,7 @@ defmodule Tdig do
     |> DNSpacket.create
     |> write_file(arg.write_request)
     |> send_server(arg)
+    |> dbg
   end
 
   def check_edns(%{edns: false}), do: []
@@ -102,6 +103,7 @@ defmodule Tdig do
     |> disp_answer(:answer, arg[:sort])
     |> disp_answer(:authority, arg[:sort])
     |> disp_answer(:additional, arg[:sort])
+    |> dbg
 
     disp_tailer(server |> :inet.ntoa |> to_string, port, byte_size(response), period)
   end
@@ -119,8 +121,8 @@ defmodule Tdig do
     response
   end
 
-  defp qr(0), do: " q"
-  defp qr(1), do: " r"
+  defp qr(0), do: "  "
+  defp qr(1), do: "qr"
 
   defp opcode(0), do: "QUERY"
   defp opcode(1), do: "IQUERY"
@@ -144,7 +146,7 @@ defmodule Tdig do
 
   def disp_header(p) do
     IO.puts """
-    ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
+    ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode(p.rcode)]}, id: #{p.id}
     ;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
     """
 
@@ -172,6 +174,8 @@ defmodule Tdig do
     ;; OPT PSEUDOSECTION:
     ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
     """
+
+    IO.inspect(p, label: :edns)
 
     disp_edns_options(p.rdata)
   end
@@ -215,6 +219,7 @@ defmodule Tdig do
     p.question
     |> Enum.map(fn n -> question_item_to_string(n) end)
     |> Enum.each(fn n -> IO.puts(n) end)
+    |> dbg
 
     IO.puts ""
     p
