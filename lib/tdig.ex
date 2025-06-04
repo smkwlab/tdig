@@ -119,8 +119,8 @@ defmodule Tdig do
     response
   end
 
-  defp qr(0), do: " q"
-  defp qr(1), do: " r"
+  defp qr(0), do: "  "
+  defp qr(1), do: "qr"
 
   defp opcode(0), do: "QUERY"
   defp opcode(1), do: "IQUERY"
@@ -144,7 +144,7 @@ defmodule Tdig do
 
   def disp_header(p) do
     IO.puts """
-    ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode[p.rcode]]}, id: #{p.id}
+    ;; ->>HEADER<<- opcode: #{opcode(p.opcode)}, status: #{DNS.rcode_text[DNS.rcode(p.rcode)]}, id: #{p.id}
     ;; flags:#{qr(p.qr)}#{aa(p.aa)}#{tc(p.tc)}#{rd(p.rd)}#{ra(p.rd)}#{z(p.z)}; QUERY: #{length(p.question)}, ANSWER #{length(p.answer)}, AUTHORITY: #{length(p.authority)}, ADDITIONAL: #{length(p.additional)}
     """
 
@@ -172,6 +172,7 @@ defmodule Tdig do
     ;; OPT PSEUDOSECTION:
     ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
     """
+
 
     disp_edns_options(p.rdata)
   end

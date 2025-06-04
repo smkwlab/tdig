@@ -18,17 +18,17 @@ defmodule Tdig.MixProject do
 
   # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      extra_applications: [:logger],
-      mod: {Tdig.CLI, []}
-    ]
+    case Mix.env() do
+      :test -> [extra_applications: [:logger]]
+      _ -> [extra_applications: [:logger], mod: {Tdig.CLI, []}]
+    end
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
       {:bakeware, "~> 0.2.3", runtime: false},
-      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.3.4"},
+      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.5.4"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
     ]
