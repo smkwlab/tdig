@@ -12,7 +12,12 @@ defmodule Tdig.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [{@app, release()}],
-      preferred_cli_env: [release: :prod]
+      preferred_cli_env: [release: :prod],
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
+        flags: [:error_handling, :underspecs],
+        ignore_warnings: ".dialyzer_ignore.exs"
+      ]
     ]
   end
 
@@ -31,6 +36,8 @@ defmodule Tdig.MixProject do
       {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.5.4"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
     ]
   end
 

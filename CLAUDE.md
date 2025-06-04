@@ -27,6 +27,12 @@ mix deps.get
 # Run tests
 mix test
 
+# Run code quality checks
+mix credo
+
+# Run static analysis
+mix dialyzer
+
 # Build development release
 mix compile
 

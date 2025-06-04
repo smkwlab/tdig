@@ -4,15 +4,19 @@ defmodule Tdig.CLI do
   require Logger
 
   @moduledoc """
+  Command-line interface for the Tdig DNS lookup utility.
   
+  Handles argument parsing, option processing, and main application entry point.
   """
   @impl Bakeware.Script
+  @spec main([String.t()]) :: :ok
   def main(argv) do
     argv
     |> parse_args
     |> process
   end
 
+  @spec parse_args([String.t()]) :: map()
   def parse_args(argv) do
     argv
     |> OptionParser.parse(
@@ -74,6 +78,7 @@ defmodule Tdig.CLI do
   def switch_convert_atom({:type, value}), do: {:type, str2atom(value)}
   def switch_convert_atom(n), do: n
 
+  @spec str2atom(String.t()) :: atom()
   def str2atom(arg), do: arg |> String.downcase |> String.to_atom
 
   def parse_argv({parsed, argv, errors}) do
@@ -88,7 +93,7 @@ defmodule Tdig.CLI do
     result
   end
 
-  def parse_argv_item([<<"@",arg1::binary>> | argv], result) do
+  def parse_argv_item([<<"@", arg1::binary>> | argv], result) do
     parse_argv_item(argv, %{result | server: arg1})
   end
 
@@ -109,6 +114,7 @@ defmodule Tdig.CLI do
     System.halt(1)
   end
 
+  @spec add_tail_dot(String.t()) :: String.t()
   def add_tail_dot(name) do
     if name |> String.ends_with?(".") do
       name

@@ -3,6 +3,27 @@ defmodule Tdig do
   Documentation for `Tdig`.
   """
 
+  @type dns_query_args :: %{
+    name: String.t(),
+    type: atom(),
+    class: atom(),
+    server: String.t(),
+    port: integer(),
+    tcp: boolean(),
+    v4: boolean(),
+    v6: boolean(),
+    edns: boolean(),
+    bufsize: integer(),
+    options: list(),
+    ex_rcode: integer(),
+    write: String.t() | nil,
+    write_request: String.t() | nil,
+    read: String.t() | nil,
+    sort: boolean(),
+    ignore: boolean()
+  }
+
+  @spec resolve(dns_query_args()) :: :ok
   def resolve(arg) do
     start = System.monotonic_time(:millisecond)
     
@@ -12,8 +33,9 @@ defmodule Tdig do
     |> disp_response(arg, System.monotonic_time(:millisecond) - start)
   end
 
+  @spec get_response(dns_query_args()) :: {binary(), {{integer(), integer(), integer(), integer()}, String.t()}}
   def get_response(%{read: file}) when is_binary(file),
-    do: {File.read!(file), {{0,0,0,0}, "  '#{file}'  "}}
+    do: {File.read!(file), {{0, 0, 0, 0}, "  '#{file}'  "}}
 
   def get_response(arg) do
     %DNSpacket{
@@ -33,6 +55,7 @@ defmodule Tdig do
     |> send_server(arg)
   end
 
+  @spec check_edns(map()) :: list()
   def check_edns(%{edns: false}), do: []
 
   # FIXME
@@ -89,6 +112,7 @@ defmodule Tdig do
     packet
   end
 
+  @spec select_protocol(boolean(), boolean()) :: {:inet | :inet6, 4 | 6}
   def select_protocol(_, true), do: {:inet6, 6}
   def select_protocol(_, _),    do: {:inet, 4}
 
@@ -151,6 +175,7 @@ defmodule Tdig do
     p
   end
 
+  @spec a2s(atom()) :: String.t()
   def a2s(a) do
     a
     |> Atom.to_string
@@ -194,19 +219,19 @@ defmodule Tdig do
   end
 
   defp disp_edns_option_item(opt) do
-    IO.inspect opt
+    IO.puts "Unknown EDNS option: #{inspect(opt)}"
   end
 
   def complete_addr(%{family: 1, source: source} = opt) do
     padding_length = 32 - source
-    <<a1::8,a2::8,a3::8,a4::8>> = opt.addr <> <<0::size(padding_length)>>
+    <<a1::8, a2::8, a3::8, a4::8>> = opt.addr <> <<0::size(padding_length)>>
     "#{:inet.ntoa({a1, a2, a3, a4})}"
   end
 
   def complete_addr(%{family: 2, source: source} = opt) do
     padding_length = 128 - source
-    <<a1::16,a2::16,a3::16,a4::16,a5::16,a6::16,a7::16,a8::16>> = opt.addr <> <<0::size(padding_length)>>
-    "#{:inet.ntoa({a1,a2,a3,a4,a5,a6,a7,a8})}"
+    <<a1::16, a2::16, a3::16, a4::16, a5::16, a6::16, a7::16, a8::16>> = opt.addr <> <<0::size(padding_length)>>
+    "#{:inet.ntoa({a1, a2, a3, a4, a5, a6, a7, a8})}"
   end
 
 
