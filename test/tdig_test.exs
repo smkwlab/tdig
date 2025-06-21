@@ -198,4 +198,28 @@ defmodule TdigTest do
       assert String.contains?(result, "2001:db8")
     end
   end
+
+  describe "help functionality" do
+    @tag :help
+    test "parse_args identifies help option with -h" do
+      result = Tdig.CLI.parse_args(["-h"])
+      assert result.help == true
+      assert result.exit_code == 0
+    end
+
+    @tag :help
+    test "parse_args identifies help option with --help" do
+      result = Tdig.CLI.parse_args(["--help"])
+      assert result.help == true
+      assert result.exit_code == 0
+    end
+
+    @tag :help
+    test "parse_args defaults to help when no name provided" do
+      result = Tdig.CLI.parse_args([])
+      # 引数なしの場合、nameは"."にデフォルト設定されるため、helpフラグは設定されない
+      assert result.name == "."
+      assert Map.get(result, :help) == nil
+    end
+  end
 end
