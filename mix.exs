@@ -12,6 +12,7 @@ defmodule Tdig.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [{@app, release()}],
+      escript: escript(),
       preferred_cli_env: [release: :prod],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
@@ -48,6 +49,13 @@ defmodule Tdig.MixProject do
       quiet: true,
       steps: [:assemble, &Bakeware.assemble/1],
       strip_beams: Mix.env() == :prod
+    ]
+  end
+
+  defp escript do
+    [
+      main_module: Tdig.CLI,
+      name: "tdig"
     ]
   end
 end
