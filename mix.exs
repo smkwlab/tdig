@@ -8,7 +8,7 @@ defmodule Tdig.MixProject do
       app: :tdig,
       version: "0.3.0",
       name: "Tdig",
-      elixir: "~> 1.12",
+      elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       releases: [{@app, release()}],
@@ -34,7 +34,7 @@ defmodule Tdig.MixProject do
   defp deps do
     [
       {:bakeware, "~> 0.2.3", runtime: false},
-      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.5.4"},
+      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.7.0"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
