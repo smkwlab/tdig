@@ -1,6 +1,4 @@
 defmodule Tdig.CLI do
-  use Bakeware.Script
-
   require Logger
 
   @moduledoc """
@@ -8,7 +6,35 @@ defmodule Tdig.CLI do
   
   Handles argument parsing, option processing, and main application entry point.
   """
-  @impl Bakeware.Script
+
+  @spec start(term(), [term()]) :: {:ok, pid()}
+  def start(_type, _args) do
+    # Burritoから呼ばれた場合の対応
+    args = if Code.ensure_loaded?(Burrito.Util.Args) do
+      Burrito.Util.Args.argv()
+    else
+      []
+    end
+    
+    # CLIタスクを別プロセスで実行
+    Task.start(fn ->
+      result = main(args)
+      
+      exit_code = case result do
+        :ok -> 0
+        {:error, _} -> 1
+        _ -> 0
+      end
+      
+      System.halt(exit_code)
+    end)
+    
+    # Supervisorを起動してアプリケーションが終了しないようにする
+    children = []
+    opts = [strategy: :one_for_one, name: Tdig.Supervisor]
+    Supervisor.start_link(children, opts)
+  end
+
   @spec main([String.t()]) :: :ok
   def main(argv) do
     argv

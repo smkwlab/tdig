@@ -4,7 +4,24 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tdig is a DNS lookup utility written in Elixir, similar to the Unix `dig` command. It's built as a CLI application using Bakeware for creating standalone executables.
+Tdig is a DNS lookup utility written in Elixir, similar to the Unix `dig` command. It's built as a CLI application using Burrito for creating standalone executables.
+
+## Burrito Migration Notes
+
+**Current Status**: Successfully migrated to Burrito
+**Previous Tool**: Bakeware (removed)
+
+**Migration Completed**:
+- ✅ Removed bakeware dependencies
+- ✅ Added burrito dependency (v1.3.0)
+- ✅ Updated mix.exs configuration
+- ✅ Created Tdig.Application module for OTP entry point
+- ✅ Configured custom ERTS: otp_27.3.4.1_darwin_aarch64_custom.tar.gz
+
+**Benefits Achieved**:
+- Smaller binary sizes
+- Better cross-platform support  
+- Active maintenance and updates
 
 ## Core Architecture
 
@@ -36,7 +53,7 @@ mix dialyzer
 # Build development release
 mix compile
 
-# Create production release with Bakeware
+# Create production release with Burrito
 MIX_ENV=prod mix release
 
 # Run the application in development
@@ -56,7 +73,7 @@ Run tests with `mix test`.
 
 - `tenbin_dns` - DNS packet handling (custom fork)
 - `socket` - Low-level socket operations
-- `bakeware` - Creating standalone executables
+- `burrito` - Creating standalone executables  
 - `zoneinfo` - Timezone database for timestamp formatting
 
 ## Configuration
