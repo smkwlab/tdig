@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Tdig is a DNS lookup utility written in Elixir, similar to the Unix `dig` command. It's built as a CLI application using Bakeware for creating standalone executables.
+Tdig is a DNS lookup utility written in Elixir, similar to the Unix `dig` command. It supports dual build modes: escript for developers and Bakeware for standalone distribution.
 
 ## Core Architecture
 
@@ -36,7 +36,10 @@ mix dialyzer
 # Build development release
 mix compile
 
-# Create production release with Bakeware
+# Create escript version (for developers)
+mix escript.build
+
+# Create production release with Bakeware (for distribution)
 MIX_ENV=prod mix release
 
 # Run the application in development
@@ -56,8 +59,43 @@ Run tests with `mix test`.
 
 - `tenbin_dns` - DNS packet handling (custom fork)
 - `socket` - Low-level socket operations
-- `bakeware` - Creating standalone executables
+- `bakeware` - Creating standalone executables (Bakeware mode)
 - `zoneinfo` - Timezone database for timestamp formatting
+
+## Build Modes
+
+### escript (Developer Mode)
+- **Target audience**: Elixir developers, CI/CD environments
+- **Requirements**: Erlang/Elixir runtime must be installed
+- **Advantages**: Fast build, small file size, easy debugging
+- **Build command**: `mix escript.build`
+- **Output**: `./tdig` executable script
+
+### Bakeware (Distribution Mode)  
+- **Target audience**: End users, system administrators
+- **Requirements**: No Erlang/Elixir runtime needed
+- **Advantages**: Self-contained binary, no dependencies
+- **Build command**: `MIX_ENV=prod mix release`
+- **Output**: `./_build/prod/rel/bakeware/tdig` standalone binary
+
+## Installation Options
+
+### For Elixir Developers
+```bash
+# Install from source
+git clone https://github.com/smkwlab/tdig.git
+cd tdig
+mix deps.get && mix escript.build
+./tdig google.com A
+```
+
+### For End Users
+Download the standalone binary from releases:
+```bash
+curl -L -o tdig https://github.com/smkwlab/tdig/releases/latest/download/tdig
+chmod +x tdig
+./tdig google.com A
+```
 
 ## Configuration
 

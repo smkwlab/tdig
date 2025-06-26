@@ -6,14 +6,22 @@ defmodule Tdig.CLI do
   @moduledoc """
   Command-line interface for the Tdig DNS lookup utility.
   
+  Supports both escript and Bakeware execution modes.
   Handles argument parsing, option processing, and main application entry point.
   """
+
+  # Entry point for both escript and Bakeware
   @impl Bakeware.Script
   @spec main([String.t()]) :: :ok
   def main(argv) do
+    run(argv)
+  end
+
+  # Common execution logic for both modes
+  defp run(argv) do
     argv
-    |> parse_args
-    |> process
+    |> parse_args()
+    |> process()
   end
 
   @spec parse_args([String.t()]) :: map()
