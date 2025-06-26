@@ -11,7 +11,7 @@ defmodule Tdig.MixProject do
       elixir: "~> 1.12",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      releases: releases(),
+      releases: [{@app, release()}],
       preferred_cli_env: [release: :prod],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
@@ -23,16 +23,16 @@ defmodule Tdig.MixProject do
 
   # Run "mix help compile.app" to learn about applications.
   def application do
-    [
-      mod: {Tdig.Application, []},
-      extra_applications: [:logger, :burrito]
-    ]
+    case Mix.env() do
+      :test -> [extra_applications: [:logger]]
+      _ -> [extra_applications: [:logger], mod: {Tdig.CLI, []}]
+    end
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:burrito, "~> 1.3"},
+      {:bakeware, "~> 0.2.3", runtime: false},
       {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.5.4"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
@@ -41,24 +41,13 @@ defmodule Tdig.MixProject do
     ]
   end
 
-  defp releases do
+  defp release do
     [
-      tdig: [
-        overwrite: true,
-        cookie: "#{@app}_cookie",
-        quiet: true,
-        steps: [:assemble, &Burrito.wrap/1],
-        strip_beams: Mix.env() == :prod,
-        burrito: [
-          targets: [
-            macos: [
-              os: :darwin, 
-              cpu: :aarch64,
-              custom_erts: "../otp/otp_27.3.4.1_darwin_aarch64_custom.tar.gz"
-            ]
-          ]
-        ]
-      ]
+      overwrite: true,
+      cookie: "#{@app}_cookie",
+      quiet: true,
+      steps: [:assemble, &Bakeware.assemble/1],
+      strip_beams: Mix.env() == :prod
     ]
   end
 end
