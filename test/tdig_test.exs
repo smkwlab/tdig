@@ -185,17 +185,70 @@ defmodule TdigTest do
     end
   end
 
-  describe "complete address formatting" do
-    test "complete_addr formats IPv4 with partial subnet" do
-      opt = %{family: 1, source: 24, addr: <<192, 168, 1>>}
-      result = Tdig.complete_addr(opt)
+  describe "ECS address formatting" do
+    test "format_ecs_address formats IPv4 address" do
+      opt = %{family: 1, client_subnet: {192, 168, 1, 0}}
+      result = Tdig.format_ecs_address(opt)
       assert result == "192.168.1.0"
     end
 
-    test "complete_addr formats IPv6 with partial subnet" do
-      opt = %{family: 2, source: 64, addr: <<0x20, 0x01, 0x0d, 0xb8, 0x00, 0x00, 0x00, 0x00>>}
-      result = Tdig.complete_addr(opt)
+    test "format_ecs_address formats IPv6 address" do
+      opt = %{family: 2, client_subnet: {0x2001, 0x0db8, 0, 0, 0, 0, 0, 0}}
+      result = Tdig.format_ecs_address(opt)
       assert String.contains?(result, "2001:db8")
+    end
+
+    test "format_ecs_address formats binary address" do
+      opt = %{family: 1, client_subnet: <<192, 168, 1>>}
+      result = Tdig.format_ecs_address(opt)
+      assert String.contains?(result, "family(1)")
+      assert String.contains?(result, "C0:A8:1")
+    end
+  end
+
+  describe "subnet functionality" do
+    test "parse_subnet_option handles IPv4 subnet" do
+      result = Tdig.CLI.parse_subnet_option("192.0.2.1/24")
+      assert elem(result, 0) == :edns_client_subnet
+      ecs_data = elem(result, 1)
+      assert ecs_data.family == 1
+      assert ecs_data.source_prefix == 24
+      assert ecs_data.scope_prefix == 0
+      assert ecs_data.client_subnet == {192, 0, 2, 1}
+    end
+
+    test "parse_subnet_option handles IPv4 subnet with /32" do
+      result = Tdig.CLI.parse_subnet_option("10.0.0.1/32")
+      assert elem(result, 0) == :edns_client_subnet
+      ecs_data = elem(result, 1)
+      assert ecs_data.family == 1
+      assert ecs_data.source_prefix == 32
+      assert ecs_data.scope_prefix == 0
+      assert ecs_data.client_subnet == {10, 0, 0, 1}
+    end
+
+    test "parse_subnet_option handles IPv6 subnet" do
+      result = Tdig.CLI.parse_subnet_option("2001:db8::1/64")
+      assert elem(result, 0) == :edns_client_subnet
+      ecs_data = elem(result, 1)
+      assert ecs_data.family == 2
+      assert ecs_data.source_prefix == 64
+      assert ecs_data.scope_prefix == 0
+      assert ecs_data.client_subnet == {0x2001, 0x0db8, 0, 0, 0, 0, 0, 1}
+    end
+
+    test "check_edns enables EDNS with subnet option" do
+      arg = %{subnet: "192.0.2.1/24"}
+      result = Tdig.CLI.check_edns(arg)
+      assert result.edns == true
+      assert result.bufsize == DNS.edns_max_udpsize
+      assert length(result.options) == 1
+      
+      ecs_option = List.first(result.options)
+      assert elem(ecs_option, 0) == :edns_client_subnet
+      ecs_data = elem(ecs_option, 1)
+      assert ecs_data.family == 1
+      assert ecs_data.source_prefix == 24
     end
   end
 

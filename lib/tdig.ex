@@ -58,17 +58,17 @@ defmodule Tdig do
   @spec check_edns(map()) :: list()
   def check_edns(%{edns: false}), do: []
 
-  # FIXME
   def check_edns(arg) do
     [
       %{
+        name: "",
         type: :opt,
-        bufsize: arg.bufsize,
+        payload_size: arg.bufsize,
         ex_rcode: arg.ex_rcode,
         version: 0,
         dnssec: 0,
         z: 0,
-        options: arg.options,
+        rdata: arg.options,
       }
     ]
   end
@@ -183,38 +183,36 @@ defmodule Tdig do
   end
 
   def disp_edns_pseudo_header(p) do
-    p.additional
-    |> Enum.filter(fn n -> n.type == :opt end)
-    |> disp_edns_opt_record
+    disp_edns_opt_record(p.edns_info)
 
     p
   end
   
-  def disp_edns_opt_record([]), do: nil
+  def disp_edns_opt_record(nil), do: nil
 
-  def disp_edns_opt_record([%{type: :opt} = p]) do
+  def disp_edns_opt_record(edns_info) when is_map(edns_info) do
     IO.write """
     ;; OPT PSEUDOSECTION:
-    ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
+    ; EDNS: version: #{edns_info.version}, flags:#{dnssec(edns_info.dnssec)}; udp: #{edns_info.payload_size}
     """
 
-
-    disp_edns_options(p.rdata)
+    disp_edns_options(edns_info.options)
   end
 
   defp dnssec(0), do: ""
   defp dnssec(1), do: " do"
 
-  def disp_ends_options([]), do: nil
+  defp disp_edns_options(nil), do: nil
+  defp disp_edns_options([]), do: nil
 
-  defp disp_edns_options(options) do
+  defp disp_edns_options(options) when is_list(options) do
     options
     |> Enum.each(fn n -> disp_edns_option_item(n) end)
   end
 
-  defp disp_edns_option_item(%{code: :edns_client_subnet} = opt) do
+  defp disp_edns_option_item({:edns_client_subnet, opt}) do
     IO.puts """
-    ; EDNS: ECS: #{complete_addr(opt)}/#{opt.source}, #{opt.scope}
+    ; EDNS: ECS: #{format_ecs_address(opt)}/#{opt.source_prefix}, #{opt.scope_prefix}
     """
   end
 
@@ -222,16 +220,18 @@ defmodule Tdig do
     IO.puts "Unknown EDNS option: #{inspect(opt)}"
   end
 
-  def complete_addr(%{family: 1, source: source} = opt) do
-    padding_length = 32 - source
-    <<a1::8, a2::8, a3::8, a4::8>> = opt.addr <> <<0::size(padding_length)>>
-    "#{:inet.ntoa({a1, a2, a3, a4})}"
+  def format_ecs_address(%{family: 1, client_subnet: subnet}) when is_tuple(subnet) do
+    "#{:inet.ntoa(subnet)}"
   end
 
-  def complete_addr(%{family: 2, source: source} = opt) do
-    padding_length = 128 - source
-    <<a1::16, a2::16, a3::16, a4::16, a5::16, a6::16, a7::16, a8::16>> = opt.addr <> <<0::size(padding_length)>>
-    "#{:inet.ntoa({a1, a2, a3, a4, a5, a6, a7, a8})}"
+  def format_ecs_address(%{family: 2, client_subnet: subnet}) when is_tuple(subnet) do
+    "#{:inet.ntoa(subnet)}"
+  end
+
+  def format_ecs_address(%{family: family, client_subnet: subnet}) when is_binary(subnet) do
+    # バイナリ形式の場合は16進数で表示
+    hex_str = subnet |> :binary.bin_to_list() |> Enum.map(&Integer.to_string(&1, 16)) |> Enum.join(":")
+    "family(#{family}):#{hex_str}"
   end
 
 
