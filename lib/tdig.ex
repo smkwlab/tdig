@@ -196,43 +196,14 @@ defmodule Tdig do
     ; EDNS: version: #{edns_info.version}, flags:#{dnssec(edns_info.dnssec)}; udp: #{edns_info.payload_size}
     """
 
-    disp_edns_options(edns_info.options)
+    if Map.has_key?(edns_info, :ecs_family) do
+      IO.puts """
+      ; EDNS: ECS: #{:inet.ntoa(edns_info.ecs_subnet)}/#{edns_info.ecs_source_prefix}, #{edns_info.ecs_scope_prefix}
+    """
   end
 
   defp dnssec(0), do: ""
   defp dnssec(1), do: " do"
-
-  defp disp_edns_options(nil), do: nil
-  defp disp_edns_options([]), do: nil
-
-  defp disp_edns_options(options) when is_list(options) do
-    options
-    |> Enum.each(fn n -> disp_edns_option_item(n) end)
-  end
-
-  defp disp_edns_option_item({:edns_client_subnet, opt}) do
-    IO.puts """
-    ; EDNS: ECS: #{format_ecs_address(opt)}/#{opt.source_prefix}, #{opt.scope_prefix}
-    """
-  end
-
-  defp disp_edns_option_item(opt) do
-    IO.puts "Unknown EDNS option: #{inspect(opt)}"
-  end
-
-  def format_ecs_address(%{family: 1, client_subnet: subnet}) when is_tuple(subnet) do
-    "#{:inet.ntoa(subnet)}"
-  end
-
-  def format_ecs_address(%{family: 2, client_subnet: subnet}) when is_tuple(subnet) do
-    "#{:inet.ntoa(subnet)}"
-  end
-
-  def format_ecs_address(%{family: family, client_subnet: subnet}) when is_binary(subnet) do
-    # バイナリ形式の場合は16進数で表示
-    hex_str = subnet |> :binary.bin_to_list() |> Enum.map(&Integer.to_string(&1, 16)) |> Enum.join(":")
-    "family(#{family}):#{hex_str}"
-  end
 
 
   def disp_question(p) do
@@ -295,10 +266,11 @@ defmodule Tdig do
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
+    now = DateTime.utc_now() |> DateTime.to_string()
     IO.puts """
     ;; Query time: #{time} ms
     ;; SERVER: #{server}##{port}(#{server})
-    ;; WHEN: #{"Asia/Tokyo" |> DateTime.now! |> DateTime.to_string}
+    ;; WHEN: #{now}
     ;; MSG SIZE rcvd: #{size}
     """
   end
