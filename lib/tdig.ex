@@ -266,7 +266,7 @@ defmodule Tdig do
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
-    now = DateTime.utc_now() |> DateTime.to_string()
+    now = DateTime.now!("Asia/Tokyo") |> DateTime.to_string()
     IO.puts """
     ;; Query time: #{time} ms
     ;; SERVER: #{server}##{port}(#{server})
