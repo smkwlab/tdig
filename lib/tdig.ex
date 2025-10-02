@@ -200,6 +200,7 @@ defmodule Tdig do
       IO.puts """
       ; EDNS: ECS: #{format_ecs_subnet(edns_info.ecs_subnet)}/#{edns_info.ecs_source_prefix}, #{edns_info.ecs_scope_prefix}
     """
+    end
   end
 
   defp dnssec(0), do: ""
