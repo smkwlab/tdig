@@ -25,8 +25,13 @@ defmodule Tdig.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     case Mix.env() do
-      :test -> [extra_applications: [:logger]]
-      _ -> [extra_applications: [:logger], mod: {Tdig.CLI, []}]
+      :prod ->
+        [
+          extra_applications: [:logger],
+          mod: {Tdig.CLI, []}
+        ]
+      _ ->
+        [extra_applications: [:logger]]
     end
   end
 
