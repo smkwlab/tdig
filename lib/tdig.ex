@@ -266,9 +266,10 @@ defmodule Tdig do
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
-    # Get system timezone from TZ environment variable, fallback to UTC
-    timezone = System.get_env("TZ", "Etc/UTC")
-    now = DateTime.now!(timezone) |> DateTime.to_string()
+    # Get system local time (OS-independent)
+    {{year, month, day}, {hour, minute, second}} = :calendar.local_time()
+    now = "#{year}-#{pad(month)}-#{pad(day)} #{pad(hour)}:#{pad(minute)}:#{pad(second)}"
+
     IO.puts """
     ;; Query time: #{time} ms
     ;; SERVER: #{server}##{port}(#{server})
@@ -276,4 +277,8 @@ defmodule Tdig do
     ;; MSG SIZE rcvd: #{size}
     """
   end
+
+  # Pad single digit numbers with leading zero
+  defp pad(num) when num < 10, do: "0#{num}"
+  defp pad(num), do: "#{num}"
 end
