@@ -266,7 +266,9 @@ defmodule Tdig do
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
-    now = DateTime.now!("Asia/Tokyo") |> DateTime.to_string()
+    # Get system timezone from TZ environment variable, fallback to UTC
+    timezone = System.get_env("TZ", "Etc/UTC")
+    now = DateTime.now!(timezone) |> DateTime.to_string()
     IO.puts """
     ;; Query time: #{time} ms
     ;; SERVER: #{server}##{port}(#{server})
