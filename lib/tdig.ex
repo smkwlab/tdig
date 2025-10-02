@@ -58,17 +58,17 @@ defmodule Tdig do
   @spec check_edns(map()) :: list()
   def check_edns(%{edns: false}), do: []
 
-  # FIXME
   def check_edns(arg) do
     [
       %{
+        name: "",
         type: :opt,
-        bufsize: arg.bufsize,
+        payload_size: arg.bufsize,
         ex_rcode: arg.ex_rcode,
         version: 0,
         dnssec: 0,
         z: 0,
-        options: arg.options,
+        rdata: arg.options,
       }
     ]
   end
@@ -183,56 +183,37 @@ defmodule Tdig do
   end
 
   def disp_edns_pseudo_header(p) do
-    p.additional
-    |> Enum.filter(fn n -> n.type == :opt end)
-    |> disp_edns_opt_record
+    disp_edns_opt_record(p.edns_info)
 
     p
   end
   
-  def disp_edns_opt_record([]), do: nil
+  def disp_edns_opt_record(nil), do: nil
 
-  def disp_edns_opt_record([%{type: :opt} = p]) do
+  def disp_edns_opt_record(edns_info) when is_map(edns_info) do
     IO.write """
     ;; OPT PSEUDOSECTION:
-    ; EDNS: version: #{p.version}, flags:#{dnssec(p.dnssec)}; udp: #{p.payload_size}
+    ; EDNS: version: #{edns_info.version}, flags:#{dnssec(edns_info.dnssec)}; udp: #{edns_info.payload_size}
     """
 
-
-    disp_edns_options(p.rdata)
+    if Map.has_key?(edns_info, :ecs_family) do
+      IO.puts """
+      ; EDNS: ECS: #{format_ecs_subnet(edns_info.ecs_subnet)}/#{edns_info.ecs_source_prefix}, #{edns_info.ecs_scope_prefix}
+    """
+    end
   end
 
   defp dnssec(0), do: ""
   defp dnssec(1), do: " do"
 
-  def disp_ends_options([]), do: nil
-
-  defp disp_edns_options(options) do
-    options
-    |> Enum.each(fn n -> disp_edns_option_item(n) end)
+  # Format ECS subnet with proper error handling
+  defp format_ecs_subnet(subnet) when is_tuple(subnet) and tuple_size(subnet) in [4, 8] do
+    :inet.ntoa(subnet) |> to_string()
   end
 
-  defp disp_edns_option_item(%{code: :edns_client_subnet} = opt) do
-    IO.puts """
-    ; EDNS: ECS: #{complete_addr(opt)}/#{opt.source}, #{opt.scope}
-    """
-  end
-
-  defp disp_edns_option_item(opt) do
-    IO.puts "Unknown EDNS option: #{inspect(opt)}"
-  end
-
-  def complete_addr(%{family: 1, source: source} = opt) do
-    padding_length = 32 - source
-    <<a1::8, a2::8, a3::8, a4::8>> = opt.addr <> <<0::size(padding_length)>>
-    "#{:inet.ntoa({a1, a2, a3, a4})}"
-  end
-
-  def complete_addr(%{family: 2, source: source} = opt) do
-    padding_length = 128 - source
-    <<a1::16, a2::16, a3::16, a4::16, a5::16, a6::16, a7::16, a8::16>> = opt.addr <> <<0::size(padding_length)>>
-    "#{:inet.ntoa({a1, a2, a3, a4, a5, a6, a7, a8})}"
-  end
+  defp format_ecs_subnet(subnet) when is_binary(subnet), do: subnet
+  defp format_ecs_subnet(subnet) when is_list(subnet), do: to_string(subnet)
+  defp format_ecs_subnet(_), do: "invalid"
 
 
   def disp_question(p) do
@@ -295,10 +276,13 @@ defmodule Tdig do
   def rdata_to_string(rdata, _), do: inspect(rdata)
 
   def disp_tailer(server, port, size, time) do
+    # Get system local time using NaiveDateTime (OS-independent, cleaner)
+    now = NaiveDateTime.local_now() |> NaiveDateTime.to_string()
+
     IO.puts """
     ;; Query time: #{time} ms
     ;; SERVER: #{server}##{port}(#{server})
-    ;; WHEN: #{"Asia/Tokyo" |> DateTime.now! |> DateTime.to_string}
+    ;; WHEN: #{now}
     ;; MSG SIZE rcvd: #{size}
     """
   end

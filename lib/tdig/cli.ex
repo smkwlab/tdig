@@ -45,6 +45,7 @@ defmodule Tdig.CLI do
         write_request: :string,
         read: :string,
         version: :boolean,
+        subnet: :string,
       ],
       aliases: [
         c: :class,
@@ -152,6 +153,7 @@ defmodule Tdig.CLI do
 
   def check_edns(%{bufsize: size} = arg) when is_integer(size), do: mk_edns(arg)
   def check_edns(%{edns: false} = arg), do: arg
+  def check_edns(%{subnet: subnet} = arg) when is_binary(subnet), do: arg |> Map.put(:bufsize, DNS.edns_max_udpsize) |> mk_edns_with_subnet
 
   def check_edns(arg) do
     arg
@@ -164,6 +166,48 @@ defmodule Tdig.CLI do
     |> Map.put(:edns, true)
     |> Map.put(:ex_rcode, 0)
     |> Map.put(:options, [])
+  end
+
+  def mk_edns_with_subnet(arg) do
+    ecs_option = parse_subnet_option(arg.subnet)
+    arg
+    |> Map.put(:edns, true)
+    |> Map.put(:ex_rcode, 0)
+    |> Map.put(:options, [ecs_option])
+  end
+
+  @spec parse_subnet_option(String.t()) :: {atom(), map()}
+  def parse_subnet_option(subnet) do
+    case String.split(subnet, "/") do
+      [addr_str, prefix_str] ->
+        prefix = String.to_integer(prefix_str)
+        case :inet.parse_address(String.to_charlist(addr_str)) do
+          {:ok, {a, b, c, d}} -> 
+            # IPv4
+            source_bits = min(prefix, 32)
+            {:edns_client_subnet, %{
+              family: 1,
+              client_subnet: {a, b, c, d},
+              source_prefix: source_bits,
+              scope_prefix: 0
+            }}
+          {:ok, {a, b, c, d, e, f, g, h}} ->
+            # IPv6
+            source_bits = min(prefix, 128)
+            {:edns_client_subnet, %{
+              family: 2,
+              client_subnet: {a, b, c, d, e, f, g, h},
+              source_prefix: source_bits,
+              scope_prefix: 0
+            }}
+          _ ->
+            IO.puts(:stderr, "Invalid subnet address: #{addr_str}")
+            System.halt(1)
+        end
+      _ ->
+        IO.puts(:stderr, "Invalid subnet format. Use: address/prefix (e.g., 192.0.2.1/24)")
+        System.halt(1)
+    end
   end
 
   def check_args(%{help: true}), do: %{help: true, exit_code: 0}
@@ -196,6 +240,7 @@ defmodule Tdig.CLI do
        --ignore               Don't revert to TCP for TC responses
     -e --edns                 use EDNS0
     -b --bufsize <size>       set EDNS0 Max UDP packet size
+       --subnet <addr/len>    send EDNS Client Subnet option
     -s --sort                 sort RRs
     -r --read <file>          read packet from file
     -f        <file>          same as -r

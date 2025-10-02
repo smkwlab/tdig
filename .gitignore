@@ -27,3 +27,4 @@ tdig-*.tar
 
 mix.lock
 tdig
+test_release/
