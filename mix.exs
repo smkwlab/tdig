@@ -33,6 +33,7 @@ defmodule Tdig.MixProject do
           extra_applications: [:logger],
           mod: {Tdig.CLI, []}
         ]
+
       _ ->
         [extra_applications: [:logger]]
     end
@@ -46,7 +47,7 @@ defmodule Tdig.MixProject do
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 

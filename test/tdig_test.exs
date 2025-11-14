@@ -3,27 +3,34 @@ defmodule TdigTest do
 
   describe "CLI argument parsing" do
     test "parse_switches converts string types to atoms" do
-      assert Tdig.CLI.parse_switches({[type: "a", class: "in", port: 53], [], []}) == {[type: :a, class: :in, port: 53], [], []}
+      assert Tdig.CLI.parse_switches({[type: "a", class: "in", port: 53], [], []}) ==
+               {[type: :a, class: :in, port: 53], [], []}
     end
 
     test "parse_switches handles mixed case types" do
-      assert Tdig.CLI.parse_switches({[type: "AAAA", class: "IN"], [], []}) == {[type: :aaaa, class: :in], [], []}
+      assert Tdig.CLI.parse_switches({[type: "AAAA", class: "IN"], [], []}) ==
+               {[type: :aaaa, class: :in], [], []}
     end
 
     test "parse_argv with domain and type" do
-      assert Tdig.CLI.parse_argv({[], ["example.com.", "MX"], []}) == {[], %{name: "example.com.", type: :mx, class: nil, server: nil}, []}
+      assert Tdig.CLI.parse_argv({[], ["example.com.", "MX"], []}) ==
+               {[], %{name: "example.com.", type: :mx, class: nil, server: nil}, []}
     end
 
     test "parse_argv with server specification" do
-      assert Tdig.CLI.parse_argv({[], ["@8.8.8.8", "example.com", "A"], []}) == {[], %{name: "example.com.", type: :a, class: nil, server: "8.8.8.8"}, []}
+      assert Tdig.CLI.parse_argv({[], ["@8.8.8.8", "example.com", "A"], []}) ==
+               {[], %{name: "example.com.", type: :a, class: nil, server: "8.8.8.8"}, []}
     end
 
     test "parse_argv with domain only defaults to root" do
-      assert Tdig.CLI.parse_argv({[], [], []}) == {[], %{name: ".", type: nil, class: nil, server: nil}, []}
+      assert Tdig.CLI.parse_argv({[], [], []}) ==
+               {[], %{name: ".", type: nil, class: nil, server: nil}, []}
     end
 
     test "merge_switches_and_argv prioritizes switches over argv" do
-      assert Tdig.CLI.merge_switches_and_argv({[type: :a, port: 53], %{name: "example.com.", type: :mx, class: :in}, []}) == %{name: "example.com.", type: :a, class: :in, port: 53}
+      assert Tdig.CLI.merge_switches_and_argv(
+               {[type: :a, port: 53], %{name: "example.com.", type: :mx, class: :in}, []}
+             ) == %{name: "example.com.", type: :a, class: :in, port: 53}
     end
   end
 
@@ -103,7 +110,7 @@ defmodule TdigTest do
       arg = %{}
       result = Tdig.CLI.check_edns(arg)
       assert result.edns == true
-      assert result.bufsize == DNS.edns_max_udpsize
+      assert result.bufsize == DNS.edns_max_udpsize()
     end
   end
 
@@ -134,6 +141,7 @@ defmodule TdigTest do
         %{type: :a, name: "example.com"},
         %{type: :cname, name: "example.com"}
       ]
+
       result = Tdig.sort_answer(answers, true)
       assert Enum.at(result, 0).type == :a
       assert Enum.at(result, 1).type == :cname
@@ -145,6 +153,7 @@ defmodule TdigTest do
         %{type: :mx, name: "example.com"},
         %{type: :a, name: "example.com"}
       ]
+
       result = Tdig.sort_answer(answers, false)
       assert Enum.at(result, 0).type == :mx
       assert Enum.at(result, 1).type == :a
@@ -213,16 +222,16 @@ defmodule TdigTest do
       assert ecs_data.family == 2
       assert ecs_data.source_prefix == 64
       assert ecs_data.scope_prefix == 0
-      assert ecs_data.client_subnet == {0x2001, 0x0db8, 0, 0, 0, 0, 0, 1}
+      assert ecs_data.client_subnet == {0x2001, 0x0DB8, 0, 0, 0, 0, 0, 1}
     end
 
     test "check_edns enables EDNS with subnet option" do
       arg = %{subnet: "192.0.2.1/24"}
       result = Tdig.CLI.check_edns(arg)
       assert result.edns == true
-      assert result.bufsize == DNS.edns_max_udpsize
+      assert result.bufsize == DNS.edns_max_udpsize()
       assert length(result.options) == 1
-      
+
       ecs_option = List.first(result.options)
       assert elem(ecs_option, 0) == :edns_client_subnet
       ecs_data = elem(ecs_option, 1)
@@ -249,6 +258,7 @@ defmodule TdigTest do
     @tag :help
     test "parse_args defaults to help when no name provided" do
       result = Tdig.CLI.parse_args([])
+
       # 引数なしの場合、nameは"."にデフォルト設定されるため、helpフラグは設定されない
       assert result.name == "."
       assert Map.get(result, :help) == nil

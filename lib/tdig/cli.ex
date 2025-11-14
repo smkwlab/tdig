@@ -5,7 +5,7 @@ defmodule Tdig.CLI do
 
   @moduledoc """
   Command-line interface for the Tdig DNS lookup utility.
-  
+
   Supports both escript and Bakeware execution modes.
   Handles argument parsing, option processing, and main application entry point.
   """
@@ -45,7 +45,7 @@ defmodule Tdig.CLI do
         write_request: :string,
         read: :string,
         version: :boolean,
-        subnet: :string,
+        subnet: :string
       ],
       aliases: [
         c: :class,
@@ -59,14 +59,15 @@ defmodule Tdig.CLI do
         w: :write,
         r: :read,
         f: :read,
-        v: :version,
-      ])
+        v: :version
+      ]
+    )
     |> parse_switches
     |> parse_argv
     |> merge_switches_and_argv
     |> Map.update(:server, nil, fn n -> n || "8.8.8.8" end)
-    |> Map.update(:type,   nil, fn n -> n || :a end)
-    |> Map.update(:class,  nil, fn n -> n || :in end)
+    |> Map.update(:type, nil, fn n -> n || :a end)
+    |> Map.update(:class, nil, fn n -> n || :in end)
     |> Map.put_new(:v4, true)
     |> Map.put_new(:v6, false)
     |> Map.put_new(:port, 53)
@@ -78,17 +79,17 @@ defmodule Tdig.CLI do
     |> check_server_address
     |> check_edns
     |> check_args
- end
+  end
 
   def parse_switches({parsed, argv, errors}),
-    do: {Enum.map(parsed, &(switch_convert_atom(&1))), argv, errors}
+    do: {Enum.map(parsed, &switch_convert_atom(&1)), argv, errors}
 
   def switch_convert_atom({:class, value}), do: {:class, str2atom(value)}
   def switch_convert_atom({:type, value}), do: {:type, str2atom(value)}
   def switch_convert_atom(n), do: n
 
   @spec str2atom(String.t()) :: atom()
-  def str2atom(arg), do: arg |> String.downcase |> String.to_atom
+  def str2atom(arg), do: arg |> String.downcase() |> String.to_atom()
 
   def parse_argv({parsed, argv, errors}) do
     {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
@@ -97,7 +98,7 @@ defmodule Tdig.CLI do
   def parse_argv_item([], %{name: nil} = result) do
     parse_argv_item([], %{result | name: "."})
   end
-  
+
   def parse_argv_item([], result) do
     result
   end
@@ -119,7 +120,7 @@ defmodule Tdig.CLI do
   end
 
   def parse_argv_item(_, _) do
-    IO.puts :stderr, "argument error"
+    IO.puts(:stderr, "argument error")
     System.halt(1)
   end
 
@@ -137,15 +138,16 @@ defmodule Tdig.CLI do
   end
 
   def switch_to_arg([], result), do: result
-  def switch_to_arg([{k, v} | list], result), do: switch_to_arg(list,  result |> Map.put(k, v))
+  def switch_to_arg([{k, v} | list], result), do: switch_to_arg(list, result |> Map.put(k, v))
 
   def check_server_address(arg) do
-    case arg.server |> String.to_charlist |> :inet.parse_address do
+    case arg.server |> String.to_charlist() |> :inet.parse_address() do
       {:ok, address} ->
         case tuple_size(address) do
           4 -> arg |> Map.put(:v4, true) |> Map.put(:v6, false)
           8 -> arg |> Map.put(:v4, false) |> Map.put(:v6, true)
         end
+
       _ ->
         arg
     end
@@ -153,11 +155,13 @@ defmodule Tdig.CLI do
 
   def check_edns(%{bufsize: size} = arg) when is_integer(size), do: mk_edns(arg)
   def check_edns(%{edns: false} = arg), do: arg
-  def check_edns(%{subnet: subnet} = arg) when is_binary(subnet), do: arg |> Map.put(:bufsize, DNS.edns_max_udpsize) |> mk_edns_with_subnet
+
+  def check_edns(%{subnet: subnet} = arg) when is_binary(subnet),
+    do: arg |> Map.put(:bufsize, DNS.edns_max_udpsize()) |> mk_edns_with_subnet
 
   def check_edns(arg) do
     arg
-    |> Map.put(:bufsize, DNS.edns_max_udpsize)
+    |> Map.put(:bufsize, DNS.edns_max_udpsize())
     |> mk_edns
   end
 
@@ -170,6 +174,7 @@ defmodule Tdig.CLI do
 
   def mk_edns_with_subnet(arg) do
     ecs_option = parse_subnet_option(arg.subnet)
+
     arg
     |> Map.put(:edns, true)
     |> Map.put(:ex_rcode, 0)
@@ -181,29 +186,37 @@ defmodule Tdig.CLI do
     case String.split(subnet, "/") do
       [addr_str, prefix_str] ->
         prefix = String.to_integer(prefix_str)
+
         case :inet.parse_address(String.to_charlist(addr_str)) do
-          {:ok, {a, b, c, d}} -> 
+          {:ok, {a, b, c, d}} ->
             # IPv4
             source_bits = min(prefix, 32)
-            {:edns_client_subnet, %{
-              family: 1,
-              client_subnet: {a, b, c, d},
-              source_prefix: source_bits,
-              scope_prefix: 0
-            }}
+
+            {:edns_client_subnet,
+             %{
+               family: 1,
+               client_subnet: {a, b, c, d},
+               source_prefix: source_bits,
+               scope_prefix: 0
+             }}
+
           {:ok, {a, b, c, d, e, f, g, h}} ->
             # IPv6
             source_bits = min(prefix, 128)
-            {:edns_client_subnet, %{
-              family: 2,
-              client_subnet: {a, b, c, d, e, f, g, h},
-              source_prefix: source_bits,
-              scope_prefix: 0
-            }}
+
+            {:edns_client_subnet,
+             %{
+               family: 2,
+               client_subnet: {a, b, c, d, e, f, g, h},
+               source_prefix: source_bits,
+               scope_prefix: 0
+             }}
+
           _ ->
             IO.puts(:stderr, "Invalid subnet address: #{addr_str}")
             System.halt(1)
         end
+
       _ ->
         IO.puts(:stderr, "Invalid subnet format. Use: address/prefix (e.g., 192.0.2.1/24)")
         System.halt(1)
@@ -215,20 +228,24 @@ defmodule Tdig.CLI do
 
   def check_args(%{ptr: true} = args) do
     args
-    |> Map.put(:name, (args[:name] |> String.split(".") |> Enum.reverse |> tl |> Enum.join(".")) <> ".in-addr.arpa.")
+    |> Map.put(
+      :name,
+      (args[:name] |> String.split(".") |> Enum.reverse() |> tl |> Enum.join(".")) <>
+        ".in-addr.arpa."
+    )
     |> Map.put(:type, :ptr)
   end
-      
+
   def check_args(arg) do
     arg
   end
 
-  def process(%{version: true}), do: IO.puts "tdig 0.3.1 (tenbin_dns 0.3.4)"
-  
+  def process(%{version: true}), do: IO.puts("tdig 0.3.1 (tenbin_dns 0.3.4)")
+
   def process(%{help: true, exit_code: exit_code}) do
-    IO.puts """
+    IO.puts("""
     Usage: tdig [options] [@server] host [type] [class]
-    
+
     options
     -c --class <class>        specify query class
     -t --type <type>          specify query type
@@ -248,14 +265,13 @@ defmodule Tdig.CLI do
        --write-request <file> write request packet to file
     -v --version              print version and exit
     -h --help                 print help and exit
-    """
+    """)
+
     System.halt(exit_code)
   end
 
   def process(arg) do
     arg
-    |> Tdig.resolve
+    |> Tdig.resolve()
   end
-
 end
-
