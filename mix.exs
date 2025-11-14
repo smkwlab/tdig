@@ -13,13 +13,16 @@ defmodule Tdig.MixProject do
       deps: deps(),
       releases: [{@app, release()}],
       escript: escript(),
-      preferred_cli_env: [release: :prod],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling, :underspecs],
         ignore_warnings: ".dialyzer_ignore.exs"
       ]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [release: :prod]]
   end
 
   # Run "mix help compile.app" to learn about applications.
