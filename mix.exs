@@ -17,7 +17,8 @@ defmodule Tdig.MixProject do
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling, :underspecs],
         ignore_warnings: ".dialyzer_ignore.exs"
-      ]
+      ],
+      test_coverage: [summary: [threshold: 30]]
     ]
   end
 
