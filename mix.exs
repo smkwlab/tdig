@@ -13,13 +13,17 @@ defmodule Tdig.MixProject do
       deps: deps(),
       releases: [{@app, release()}],
       escript: escript(),
-      preferred_cli_env: [release: :prod],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
         flags: [:error_handling, :underspecs],
         ignore_warnings: ".dialyzer_ignore.exs"
-      ]
+      ],
+      test_coverage: [summary: [threshold: 30]]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [release: :prod]]
   end
 
   # Run "mix help compile.app" to learn about applications.
@@ -30,6 +34,7 @@ defmodule Tdig.MixProject do
           extra_applications: [:logger],
           mod: {Tdig.CLI, []}
         ]
+
       _ ->
         [extra_applications: [:logger]]
     end
@@ -43,7 +48,7 @@ defmodule Tdig.MixProject do
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false}
     ]
   end
 
