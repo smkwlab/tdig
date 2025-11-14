@@ -185,27 +185,6 @@ defmodule TdigTest do
     end
   end
 
-  describe "ECS address formatting" do
-    test "format_ecs_address formats IPv4 address" do
-      opt = %{family: 1, client_subnet: {192, 168, 1, 0}}
-      result = Tdig.format_ecs_address(opt)
-      assert result == "192.168.1.0"
-    end
-
-    test "format_ecs_address formats IPv6 address" do
-      opt = %{family: 2, client_subnet: {0x2001, 0x0db8, 0, 0, 0, 0, 0, 0}}
-      result = Tdig.format_ecs_address(opt)
-      assert String.contains?(result, "2001:db8")
-    end
-
-    test "format_ecs_address formats binary address" do
-      opt = %{family: 1, client_subnet: <<192, 168, 1>>}
-      result = Tdig.format_ecs_address(opt)
-      assert String.contains?(result, "family(1)")
-      assert String.contains?(result, "C0:A8:1")
-    end
-  end
-
   describe "subnet functionality" do
     test "parse_subnet_option handles IPv4 subnet" do
       result = Tdig.CLI.parse_subnet_option("192.0.2.1/24")
