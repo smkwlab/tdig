@@ -11,11 +11,15 @@ name: Release
 on:
   push:
     tags:
-      # Match numeric semver tags X.Y.Z. We use the extglob form
-      # `+([0-9])` ("one or more digits") to avoid any ambiguity around
-      # whether GitHub Actions' filter language treats `+` as a quantifier
-      # or as a literal character. See Issue #49 / PR #50 review thread.
-      - '+([0-9]).+([0-9]).+([0-9])'
+      # Match numeric semver tags X.Y.Z. GitHub Actions tag filters
+      # support `+` as "one or more of the preceding character" (see the
+      # cheat sheet at
+      # https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions#filter-pattern-cheat-sheet
+      # which shows `v[12].[0-9]+.[0-9]+` matching `v1.0.2`). The extglob
+      # form `+([0-9])` is NOT supported here and silently fails to
+      # match real tags (verified empirically: tag `0.3.0` did not
+      # trigger this workflow when the pattern was extglob).
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: write
