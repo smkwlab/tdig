@@ -39,10 +39,33 @@ example.com.            37      IN      A       172.66.147.243
 
 ### For end users — standalone binary (Bakeware)
 
-Pre-built binaries published as GitHub release assets are self-contained and don't require Elixir or Erlang to be installed:
+Pre-built binaries published as GitHub release assets are self-contained and don't require Elixir or Erlang to be installed. Currently supported targets:
+
+| Platform | Asset |
+|---|---|
+| Linux x86_64 | `tdig-linux-x86_64` |
+| macOS arm64 (Apple Silicon) | `tdig-macos-arm64` |
+
+Pick the binary matching your platform:
 
 ```bash
-curl -L -o tdig https://github.com/smkwlab/tdig/releases/latest/download/tdig
+# Linux x86_64
+curl -L -o tdig https://github.com/smkwlab/tdig/releases/latest/download/tdig-linux-x86_64
+chmod +x tdig
+./tdig example.com A
+
+# macOS arm64
+curl -L -o tdig https://github.com/smkwlab/tdig/releases/latest/download/tdig-macos-arm64
+chmod +x tdig
+./tdig example.com A
+```
+
+Or auto-detect via `uname`:
+
+```bash
+OS=$(uname -s | tr '[:upper:]' '[:lower:]' | sed 's/darwin/macos/')
+ARCH=$(uname -m)
+curl -L -o tdig "https://github.com/smkwlab/tdig/releases/latest/download/tdig-${OS}-${ARCH}"
 chmod +x tdig
 ./tdig example.com A
 ```
