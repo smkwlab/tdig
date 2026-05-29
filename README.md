@@ -214,7 +214,7 @@ If you already have BIND's `dig`, you don't need `tdig`. It's useful when:
 ## Requirements
 
 - **Bakeware binary**: no runtime requirement
-- **escript / source build**: Elixir 1.17 or later, Erlang/OTP 27 or later (CI verified on Elixir 1.17.3 / OTP 27.3.4.4 and Elixir 1.19.5 / OTP 28.5)
+- **escript / source build**: Elixir 1.17 or later, Erlang/OTP 27 or later. CI exercises the matrix Elixir 1.17.3 / OTP 27.3.4.4 (LTS) and Elixir 1.19.5 / OTP 28.5 (latest) via the shared reusable workflow `smkwlab/.github/.github/workflows/elixir-ci.yml@v1`.
 - **Git** is needed for `mix deps.get` because `tenbin_dns` is fetched from a git tag
 
 ## Development
@@ -227,7 +227,14 @@ mix dialyzer          # type analysis (first run is slow — builds the PLT)
 mix format            # code formatter
 ```
 
-A pre-commit hook is set up via [Lefthook](https://github.com/evilmartians/lefthook) and runs `mix format` + `mix test` + `mix credo --strict` on each commit. Skip with `LEFTHOOK=0 git commit ...` if needed.
+[Lefthook](https://github.com/evilmartians/lefthook) is configured in `lefthook.yml` to run `mix format` + `mix test` + `mix credo --strict` on each commit. Activate it with one-time setup:
+
+```bash
+brew install lefthook   # or your preferred install method
+lefthook install        # installs the .git/hooks/pre-commit shim
+```
+
+Skip the hooks with `LEFTHOOK=0 git commit ...` if needed.
 
 For repo-level context (architecture, build modes, ecosystem positioning) see [`CLAUDE.md`](CLAUDE.md).
 
