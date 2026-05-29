@@ -1,0 +1,114 @@
+# Release workflow for tdig
+#
+# Triggered on tag push matching X.Y.Z (no `v` prefix, consistent with
+# the pre-existing 0.2.0 tag). Builds a Bakeware standalone binary for
+# Linux x86_64 and macOS arm64, then attaches them to a GitHub Release.
+#
+# See Issue #49 for the design discussion and asset naming convention.
+
+name: Release
+
+on:
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset_name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: tdig-linux-x86_64
+            otp: '27.3.4.4'
+            elixir: '1.17.3'
+          - os: macos-latest
+            asset_name: tdig-macos-arm64
+            otp: '27.3.4.4'
+            elixir: '1.17.3'
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Set up Erlang/Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+
+      - name: Cache mix dependencies
+        uses: actions/cache@v4
+        with:
+          path: deps
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.exs') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Verify mix.exs version matches the tag
+        # Refuse to release if mix.exs version diverges from the pushed tag,
+        # which would leave `tdig --version` lying about the release.
+        run: |
+          MIX_VERSION=$(mix run --no-start -e 'IO.puts(Mix.Project.config()[:version])' | tail -n 1)
+          TAG_VERSION="${GITHUB_REF_NAME}"
+          if [ "${MIX_VERSION}" != "${TAG_VERSION}" ]; then
+            echo "::error::mix.exs version (${MIX_VERSION}) does not match the tag (${TAG_VERSION})"
+            exit 1
+          fi
+          echo "mix.exs version (${MIX_VERSION}) matches tag (${TAG_VERSION})"
+
+      - name: Build Bakeware release
+        env:
+          MIX_ENV: prod
+        run: mix release
+
+      - name: Rename binary for asset upload
+        run: |
+          cp _build/prod/rel/bakeware/tdig "${{ matrix.asset_name }}"
+          chmod +x "${{ matrix.asset_name }}"
+          ls -lh "${{ matrix.asset_name }}"
+
+      - name: Upload binary as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: ${{ matrix.asset_name }}
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect binaries into a flat directory
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "tdig ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            release/*
