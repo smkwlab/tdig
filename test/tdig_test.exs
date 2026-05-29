@@ -249,7 +249,9 @@ defmodule TdigTest do
     test "version/0 is a non-empty semver-shaped string" do
       version = Tdig.CLI.version()
       assert is_binary(version)
-      assert String.match?(version, ~r/^\d+\.\d+\.\d+/), "expected semver, got #{inspect(version)}"
+
+      assert String.match?(version, ~r/^\d+\.\d+\.\d+/),
+             "expected semver, got #{inspect(version)}"
     end
   end
 
