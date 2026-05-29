@@ -240,6 +240,21 @@ defmodule TdigTest do
     end
   end
 
+  describe "version reporting (Issue #49)" do
+    test "version/0 returns the mix.exs project version" do
+      # Guards against stale hardcoded version strings drifting from mix.exs.
+      assert Tdig.CLI.version() == Mix.Project.config()[:version]
+    end
+
+    test "version/0 is a non-empty semver-shaped string" do
+      version = Tdig.CLI.version()
+      assert is_binary(version)
+
+      assert String.match?(version, ~r/^\d+\.\d+\.\d+/),
+             "expected semver, got #{inspect(version)}"
+    end
+  end
+
   describe "help functionality" do
     @tag :help
     test "parse_args identifies help option with -h" do
