@@ -11,7 +11,11 @@ name: Release
 on:
   push:
     tags:
-      - '[0-9]+.[0-9]+.[0-9]+'
+      # Match numeric semver tags X.Y.Z. We use the extglob form
+      # `+([0-9])` ("one or more digits") to avoid any ambiguity around
+      # whether GitHub Actions' filter language treats `+` as a quantifier
+      # or as a literal character. See Issue #49 / PR #50 review thread.
+      - '+([0-9]).+([0-9]).+([0-9])'
 
 permissions:
   contents: write

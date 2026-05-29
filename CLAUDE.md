@@ -112,7 +112,7 @@ Releases are produced by `.github/workflows/release.yml`, triggered automaticall
 
 ### Tag convention
 - Format: `X.Y.Z` (numeric semver, **no `v` prefix**, consistent with the pre-existing `0.2.0` tag)
-- The workflow's tag filter is `'[0-9]+.[0-9]+.[0-9]+'`. Anything else (e.g., `v1.0.0`, `0.3.0-rc1`, `latest`) is silently ignored.
+- The workflow's tag filter is `'+([0-9]).+([0-9]).+([0-9])'` (extglob form for "digits.digits.digits"). Anything else (e.g., `v1.0.0`, `0.3.0-rc1`, `latest`) is silently ignored.
 
 ### Pre-release checklist
 1. The change you want to release is merged to `main`.
