@@ -10,6 +10,16 @@ defmodule Tdig.CLI do
   Handles argument parsing, option processing, and main application entry point.
   """
 
+  # Read the project version from mix.exs at compile time so `tdig --version`
+  # never drifts from the canonical source (see Issue #49).
+  @version Mix.Project.config()[:version]
+
+  @doc """
+  Returns the application version as defined in `mix.exs`.
+  """
+  @spec version() :: String.t()
+  def version, do: @version
+
   # Entry point for both escript and Bakeware
   @impl Bakeware.Script
   @spec main([String.t()]) :: :ok
@@ -240,7 +250,7 @@ defmodule Tdig.CLI do
     arg
   end
 
-  def process(%{version: true}), do: IO.puts("tdig 0.3.1 (tenbin_dns 0.3.4)")
+  def process(%{version: true}), do: IO.puts("tdig #{version()}")
 
   def process(%{help: true, exit_code: exit_code}) do
     IO.puts("""
