@@ -217,6 +217,32 @@ If you already have BIND's `dig`, you don't need `tdig`. It's useful when:
 - **escript / source build**: Elixir 1.17 or later, Erlang/OTP 27 or later. CI exercises the matrix Elixir 1.17.3 / OTP 27.3.4.4 (LTS) and Elixir 1.19.5 / OTP 28.5 (latest) via the shared reusable workflow `smkwlab/.github/.github/workflows/elixir-ci.yml@v1`.
 - **Git** is needed for `mix deps.get` because `tenbin_dns` is fetched from a git tag
 
+## Architecture
+
+`tdig` is a thin query pipeline: command-line arguments are parsed into a single options map, that map drives DNS resolution, and the wire response is parsed and printed in `dig`-style sections. The same entry point (`Tdig.CLI.main/1`) backs both the escript and Bakeware builds.
+
+```mermaid
+graph LR
+  argv["argv<br/>(command-line args)"] --> cli["Tdig.CLI<br/>(parse_args: options + positional + EDNS/PTR)"]
+  cli --> resolve["Tdig.resolve<br/>(orchestration)"]
+  resolve --> build["DNSpacket.create<br/>(build query via tenbin_dns)"]
+  build --> send["send_server<br/>(UDP / TCP send + recv)"]
+  send --> parse["DNSpacket.parse<br/>(decode response via tenbin_dns)"]
+  parse --> disp["disp_response<br/>(dig-style sections + summary)"]
+
+  disp -. "TC flag: retry over TCP" .-> resolve
+  read["--read file"] -. "skip network" .-> parse
+```
+
+Legend and notes:
+
+- **Solid arrows** trace the main request/response data flow; **dotted arrows** are conditional side paths.
+- `Tdig.CLI.parse_args/1` turns `argv` into an options map: it parses switches and positional `[@server] host [type] [class]` arguments, applies defaults (server `8.8.8.8`, type `A`, class `IN`, port `53`), auto-selects IPv4/IPv6 from the server address, and handles EDNS0 and `-x` reverse-lookup rewriting. `process/1` short-circuits `--version` / `--help` before reaching resolution.
+- `Tdig.resolve/1` builds the query with `tenbin_dns` (`DNSpacket.create/1`), sends it over UDP or TCP via the `socket` library, then parses and renders the reply (`DNSpacket.parse/1` → `disp_response/3`).
+- **TC retry** (dotted): the truncation flag is inspected only after the response is parsed — `disp_response/3` calls `check_tc_flag/2`, which re-enters `resolve/1` in TCP mode unless `--ignore` is set.
+- **`--read`** (dotted): a saved packet file is fed straight into the parse/display stage, bypassing the network entirely. `--write` / `--write-request` (not shown) persist the raw answer / query packets along the main path.
+- The two build modes (escript vs. Bakeware) share this exact pipeline; they differ only in packaging, not in query handling.
+
 ## Development
 
 ```bash
