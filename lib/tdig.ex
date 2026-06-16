@@ -80,7 +80,7 @@ defmodule Tdig do
 
     :ok = Socket.Stream.send(socket, <<byte_size(packet)::16>> <> packet)
     {:ok, <<length::16>>} = Socket.Stream.recv(socket, 2)
-    {:ok, <<response::binary-size(length)>>} = Socket.Stream.recv(socket, length)
+    {:ok, <<response::binary-size(^length)>>} = Socket.Stream.recv(socket, length)
     Socket.close(socket)
 
     {:ok, server} =

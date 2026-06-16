@@ -1,8 +1,6 @@
 defmodule Tdig.CLI do
   use Bakeware.Script
 
-  require Logger
-
   @moduledoc """
   Command-line interface for the Tdig DNS lookup utility.
 
