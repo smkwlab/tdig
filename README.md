@@ -230,7 +230,7 @@ graph LR
   send --> parse["DNSpacket.parse<br/>(decode response via tenbin_dns)"]
   parse --> disp["disp_response<br/>(dig-style sections + summary)"]
 
-  send -. "TC flag: retry over TCP" .-> resolve
+  disp -. "TC flag: retry over TCP" .-> resolve
   read["--read file"] -. "skip network" .-> parse
 ```
 
@@ -239,7 +239,7 @@ Legend and notes:
 - **Solid arrows** trace the main request/response data flow; **dotted arrows** are conditional side paths.
 - `Tdig.CLI.parse_args/1` turns `argv` into an options map: it parses switches and positional `[@server] host [type] [class]` arguments, applies defaults (server `8.8.8.8`, type `A`, class `IN`, port `53`), auto-selects IPv4/IPv6 from the server address, and handles EDNS0 and `-x` reverse-lookup rewriting. `process/1` short-circuits `--version` / `--help` before reaching resolution.
 - `Tdig.resolve/1` builds the query with `tenbin_dns` (`DNSpacket.create/1`), sends it over UDP or TCP via the `socket` library, then parses and renders the reply (`DNSpacket.parse/1` → `disp_response/3`).
-- **TC retry** (dotted): a truncated UDP response re-enters `resolve/1` in TCP mode unless `--ignore` is set.
+- **TC retry** (dotted): the truncation flag is inspected only after the response is parsed — `disp_response/3` calls `check_tc_flag/2`, which re-enters `resolve/1` in TCP mode unless `--ignore` is set.
 - **`--read`** (dotted): a saved packet file is fed straight into the parse/display stage, bypassing the network entirely. `--write` / `--write-request` (not shown) persist the raw answer / query packets along the main path.
 - The two build modes (escript vs. Bakeware) share this exact pipeline; they differ only in packaging, not in query handling.
 
