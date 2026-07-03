@@ -112,6 +112,16 @@ jobs:
           find artifacts -type f -exec cp {} release/ \;
           ls -lh release/
 
+      - name: Generate SHA256SUMS
+        # Publish a checksum manifest so downloads can be verified
+        # (curl | chmod | run otherwise trusts the transport blindly).
+        # `tdig-*` deliberately excludes the SHA256SUMS file itself.
+        run: |
+          cd release
+          sha256sum tdig-* | tee SHA256SUMS
+          # Sanity check the manifest round-trips before publishing.
+          sha256sum -c SHA256SUMS
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

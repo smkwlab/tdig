@@ -70,6 +70,22 @@ chmod +x tdig
 ./tdig example.com A
 ```
 
+#### Verifying the download
+
+Each release also publishes a `SHA256SUMS` manifest. Verify the binary's
+integrity before running it:
+
+```bash
+# Download the checksum manifest alongside the binary
+curl -L -o SHA256SUMS https://github.com/smkwlab/tdig/releases/latest/download/SHA256SUMS
+
+# Check the binary you downloaded (ignores the other platform's entry)
+sha256sum --ignore-missing -c SHA256SUMS
+# tdig-linux-x86_64: OK
+```
+
+On macOS, use `shasum -a 256 --ignore-missing -c SHA256SUMS`.
+
 ### For Elixir developers — escript
 
 If you already have Elixir installed and want a fast iterative build:
