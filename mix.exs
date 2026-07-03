@@ -44,7 +44,9 @@ defmodule Tdig.MixProject do
   defp deps do
     [
       {:bakeware, "~> 0.2.3", runtime: false},
-      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.7.0"},
+      # Immutable release tag, aligned with the servers (tenbin_ex / tenbin_cache)
+      # to avoid version drift (supply-chain hardening, smkwlab/.github#69 E-1).
+      {:tenbin_dns, git: "https://github.com/smkwlab/tenbin_dns.git", tag: "0.7.1"},
       {:socket, "~> 0.3.13"},
       {:zoneinfo, "~> 0.1.0"},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
