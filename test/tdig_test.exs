@@ -279,4 +279,54 @@ defmodule TdigTest do
       assert Map.get(result, :help) == nil
     end
   end
+
+  describe "terminal output escaping (G)" do
+    test "escape/1 passes printable ASCII through unchanged" do
+      assert Tdig.escape("example.com.") == "example.com."
+      assert Tdig.escape("a-b_c 123!") == "a-b_c 123!"
+    end
+
+    test "escape/1 renders control and non-printable bytes as \\DDD" do
+      # ESC (0x1B) — the byte that starts ANSI/OSC sequences — must not pass through.
+      assert Tdig.escape(<<0x1B, "[31mX">>) == "\\027[31mX"
+      assert Tdig.escape(<<0, 9, 10, 13>>) == "\\000\\009\\010\\013"
+      assert Tdig.escape(<<0x7F>>) == "\\127"
+      # high byte
+      assert Tdig.escape(<<0xFF>>) == "\\255"
+    end
+
+    test "escape/1 escapes backslash so the encoding is unambiguous" do
+      assert Tdig.escape("a\\b") == "a\\\\b"
+    end
+
+    test "rdata_to_string escapes untrusted TXT and name bytes" do
+      assert Tdig.rdata_to_string(%{txt: <<"hi", 0x1B, "!">>}, :txt) == "hi\\027!"
+
+      assert Tdig.rdata_to_string(%{name: <<"ns", 0x1B, ".example.">>}, :cname) ==
+               "ns\\027.example."
+
+      assert Tdig.rdata_to_string(%{flag: 0, tag: "issue", value: <<0x1B, "ca">>}, :caa) ==
+               "0 issue \\027ca"
+    end
+
+    test "answer_item_to_string escapes the owner name" do
+      line =
+        Tdig.answer_item_to_string(%{
+          name: <<"host", 0x1B, ".example.">>,
+          ttl: 60,
+          class: :in,
+          type: :a,
+          rdata: %{addr: {192, 0, 2, 1}}
+        })
+
+      refute line =~ <<0x1B>>
+      assert line =~ "host\\027.example."
+    end
+
+    test "question_item_to_string escapes the qname" do
+      line = Tdig.question_item_to_string(%{qname: <<"q", 0x1B, ".">>, qclass: :in, qtype: :a})
+      refute line =~ <<0x1B>>
+      assert line =~ "q\\027."
+    end
+  end
 end

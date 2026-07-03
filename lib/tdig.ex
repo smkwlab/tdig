@@ -212,8 +212,8 @@ defmodule Tdig do
     :inet.ntoa(subnet) |> to_string()
   end
 
-  defp format_ecs_subnet(subnet) when is_binary(subnet), do: subnet
-  defp format_ecs_subnet(subnet) when is_list(subnet), do: to_string(subnet)
+  defp format_ecs_subnet(subnet) when is_binary(subnet), do: escape(subnet)
+  defp format_ecs_subnet(subnet) when is_list(subnet), do: escape(to_string(subnet))
   defp format_ecs_subnet(_), do: "invalid"
 
   def disp_question(p) do
@@ -228,7 +228,7 @@ defmodule Tdig do
   end
 
   def question_item_to_string(q) do
-    ";#{q.qname}			#{q.qclass |> a2s}	#{q.qtype |> a2s}"
+    ";#{escape(q.qname)}			#{q.qclass |> a2s}	#{q.qtype |> a2s}"
   end
 
   def disp_answer(p, part, is_sort) do
@@ -258,24 +258,43 @@ defmodule Tdig do
 
   def answer_item_to_string(a) do
     """
-    #{a.name}		#{a.ttl}	#{a.class |> a2s}	#{a.type |> a2s}	#{a.rdata |> rdata_to_string(a.type)}
+    #{escape(a.name)}		#{a.ttl}	#{a.class |> a2s}	#{a.type |> a2s}	#{a.rdata |> rdata_to_string(a.type)}
     """
   end
 
   def rdata_to_string(rdata, :a), do: :inet.ntoa(rdata.addr)
   def rdata_to_string(rdata, :aaaa), do: :inet.ntoa(rdata.addr)
-  def rdata_to_string(rdata, :ns), do: rdata.name
-  def rdata_to_string(rdata, :ptr), do: rdata.name
-  def rdata_to_string(rdata, :cname), do: rdata.name
-  def rdata_to_string(rdata, :txt), do: rdata.txt
-  def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{rdata.name}"
-  def rdata_to_string(rdata, :caa), do: "#{rdata.flag} #{rdata.tag} #{rdata.value}"
+  def rdata_to_string(rdata, :ns), do: escape(rdata.name)
+  def rdata_to_string(rdata, :ptr), do: escape(rdata.name)
+  def rdata_to_string(rdata, :cname), do: escape(rdata.name)
+  def rdata_to_string(rdata, :txt), do: escape(rdata.txt)
+  def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{escape(rdata.name)}"
+
+  def rdata_to_string(rdata, :caa),
+    do: "#{rdata.flag} #{escape(rdata.tag)} #{escape(rdata.value)}"
 
   def rdata_to_string(rdata, :soa),
     do:
-      "#{rdata.mname} #{rdata.rname} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
+      "#{escape(rdata.mname)} #{escape(rdata.rname)} #{rdata.serial} #{rdata.refresh} #{rdata.retry} #{rdata.expire} #{rdata.minimum}"
 
   def rdata_to_string(rdata, _), do: inspect(rdata)
+
+  @doc """
+  Escape control/non-printable bytes so an untrusted DNS response field cannot
+  inject ANSI/OSC terminal escape sequences when written to a TTY.
+
+  Printable ASCII passes through; backslash becomes `\\\\` and every other byte
+  (C0/C1 controls, DEL, high bytes) becomes `\\DDD` (3-digit decimal), matching
+  `dig`'s presentation of non-printable octets.
+  """
+  @spec escape(binary()) :: binary()
+  def escape(string) when is_binary(string) do
+    for <<byte <- string>>, into: "", do: escape_byte(byte)
+  end
+
+  defp escape_byte(?\\), do: "\\\\"
+  defp escape_byte(byte) when byte in 0x20..0x7E, do: <<byte>>
+  defp escape_byte(byte), do: "\\" <> String.pad_leading(Integer.to_string(byte), 3, "0")
 
   def disp_tailer(server, port, size, time) do
     # Get system local time using NaiveDateTime (OS-independent, cleaner)
