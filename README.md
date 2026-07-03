@@ -84,7 +84,14 @@ sha256sum --ignore-missing -c SHA256SUMS
 # tdig-linux-x86_64: OK
 ```
 
-On macOS, use `shasum -a 256 --ignore-missing -c SHA256SUMS`.
+On macOS, `shasum` ships with the system but its Perl build has no
+`--ignore-missing`, so verify just the relevant line (portable — works on
+Linux too):
+
+```bash
+grep tdig-macos-arm64 SHA256SUMS | shasum -a 256 -c -
+# tdig-macos-arm64: OK
+```
 
 ### For Elixir developers — escript
 
