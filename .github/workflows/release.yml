@@ -96,10 +96,16 @@ jobs:
     name: Publish GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the release and upload assets
+      id-token: write # keyless cosign signing via GitHub OIDC
 
     steps:
       - name: Check out the repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
 
       - name: Download all build artifacts
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -129,6 +135,21 @@ jobs:
           sha256sum "${bins[@]}" | tee SHA256SUMS
           # Sanity check the manifest round-trips before publishing.
           sha256sum -c SHA256SUMS
+
+      - name: Sign SHA256SUMS with cosign (keyless)
+        # Keyless signing via GitHub OIDC — no long-lived key. Produces a
+        # self-contained bundle (signature + Fulcio cert + Rekor proof) that
+        # ties the manifest to THIS release workflow's identity. Signing the
+        # manifest covers both binaries transitively (sha256sum -c does the rest).
+        run: |
+          cd release
+          cosign sign-blob --yes --bundle SHA256SUMS.cosign.bundle SHA256SUMS
+          # Fail the release if the bundle we just produced does not verify.
+          cosign verify-blob \
+            --bundle SHA256SUMS.cosign.bundle \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/release\.yml@refs/tags/[^/]+$" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            SHA256SUMS
 
       - name: Create GitHub Release
         env:
