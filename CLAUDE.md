@@ -140,7 +140,7 @@ git push origin 0.3.0   # ← this triggers the release workflow
 ### Release integrity & authenticity
 
 - **Integrity**: `SHA256SUMS` (verify with `sha256sum --ignore-missing -c SHA256SUMS`; macOS `shasum -a 256`).
-- **Authenticity**: cosign keyless signature bound to this workflow's OIDC identity. **Downstream verification needs cosign v3+** — from `0.4.2` on the bundle is the new Sigstore format that older cosign can't read. See the README "Verifying the download" section for the `cosign verify-blob` command (`--certificate-identity-regexp` + `--certificate-oidc-issuer`).
+- **Authenticity**: cosign keyless signature bound to this workflow's OIDC identity. **Downstream verification needs cosign v3+** — from tdig release `0.4.2` on, the bundle is the new Sigstore format that older cosign (v2) can't read. See the README "Verifying the download" section for the `cosign verify-blob` command (`--certificate-identity-regexp` + `--certificate-oidc-issuer`).
 
 ### Bumping the version
 
