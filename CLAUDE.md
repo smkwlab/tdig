@@ -133,7 +133,14 @@ git push origin 0.3.0   # ← this triggers the release workflow
 2. **Version guard** — fails fast if `Mix.Project.config()[:version]` ≠ pushed tag name.
 3. **`MIX_ENV=prod mix release`** — produces the Bakeware binary at `_build/prod/rel/bakeware/tdig`.
 4. **Rename + upload artifact** — saves as `tdig-linux-x86_64` / `tdig-macos-arm64`.
-5. **Publish release** — collects both artifacts, then runs `gh release create <tag> --generate-notes <assets>`. Notes are auto-generated from PRs / commits since the previous tag.
+5. **Generate `SHA256SUMS`** — checksum manifest over both binaries (round-tripped with `sha256sum -c` before publishing).
+6. **Sign with cosign (keyless)** — cosign v3 (via `sigstore/cosign-installer@v4`, GitHub OIDC, no key to manage) signs `SHA256SUMS` → `SHA256SUMS.cosign.bundle`; an in-workflow `cosign verify-blob` self-check fails the release if signing is broken.
+7. **Publish release** — collects binaries + `SHA256SUMS` + `.cosign.bundle`, then runs `gh release create <tag> --generate-notes <assets>`. Notes are auto-generated from PRs / commits since the previous tag.
+
+### Release integrity & authenticity
+
+- **Integrity**: `SHA256SUMS` (verify with `sha256sum --ignore-missing -c SHA256SUMS`; macOS `shasum -a 256`).
+- **Authenticity**: cosign keyless signature bound to this workflow's OIDC identity. **Downstream verification needs cosign v3+** — from `0.4.2` on the bundle is the new Sigstore format that older cosign can't read. See the README "Verifying the download" section for the `cosign verify-blob` command (`--certificate-identity-regexp` + `--certificate-oidc-issuer`).
 
 ### Bumping the version
 
