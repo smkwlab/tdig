@@ -6,7 +6,7 @@ defmodule Tdig.MixProject do
   def project do
     [
       app: :tdig,
-      version: "0.4.1",
+      version: "0.4.2",
       name: "Tdig",
       elixir: "~> 1.17",
       start_permanent: Mix.env() == :prod,
