@@ -98,6 +98,34 @@ grep tdig-macos-arm64 SHA256SUMS | shasum -a 256 -c -
 # tdig-macos-arm64: OK
 ```
 
+##### Verifying authenticity (cosign)
+
+The checksum above proves *integrity*. To also prove *authenticity* — that the
+manifest really came from tdig's release workflow and not someone who tampered
+with the release — each release's `SHA256SUMS` is signed with
+[cosign](https://github.com/sigstore/cosign) **keyless** signing (no
+maintainer-held key; the signature is bound to the release workflow's identity
+via GitHub OIDC and logged to the public Sigstore transparency log).
+
+This step is optional. If you have `cosign` installed and want the stronger
+guarantee, download the bundle alongside the manifest and verify:
+
+```bash
+curl -L -o SHA256SUMS https://github.com/smkwlab/tdig/releases/latest/download/SHA256SUMS
+curl -L -o SHA256SUMS.cosign.bundle https://github.com/smkwlab/tdig/releases/latest/download/SHA256SUMS.cosign.bundle
+
+cosign verify-blob \
+  --bundle SHA256SUMS.cosign.bundle \
+  --certificate-identity-regexp '^https://github.com/smkwlab/tdig/\.github/workflows/release\.yml@refs/tags/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  SHA256SUMS
+# Verified OK
+```
+
+Once the manifest is verified, the `sha256sum` check above ties the binaries to
+it. (`--certificate-identity-regexp` accepts any release tag; pin it to a
+specific tag like `…/release\.yml@refs/tags/0.4.1$` if you want to require one.)
+
 ### For Elixir developers — escript
 
 If you already have Elixir installed and want a fast iterative build:
