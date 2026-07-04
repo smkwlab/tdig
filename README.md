@@ -116,7 +116,7 @@ curl -L -o SHA256SUMS.cosign.bundle https://github.com/smkwlab/tdig/releases/lat
 
 cosign verify-blob \
   --bundle SHA256SUMS.cosign.bundle \
-  --certificate-identity-regexp '^https://github.com/smkwlab/tdig/\.github/workflows/release\.yml@refs/tags/' \
+  --certificate-identity-regexp '^https://github.com/smkwlab/tdig/\.github/workflows/release\.yml@refs/tags/[^/]+$' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
   SHA256SUMS
 # Verified OK

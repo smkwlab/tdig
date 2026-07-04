@@ -147,7 +147,7 @@ jobs:
           # Fail the release if the bundle we just produced does not verify.
           cosign verify-blob \
             --bundle SHA256SUMS.cosign.bundle \
-            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/release\.yml@refs/tags/" \
+            --certificate-identity-regexp "^https://github.com/${GITHUB_REPOSITORY}/\.github/workflows/release\.yml@refs/tags/[^/]+$" \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             SHA256SUMS
 
