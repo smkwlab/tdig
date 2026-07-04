@@ -107,8 +107,10 @@ with the release — each release's `SHA256SUMS` is signed with
 maintainer-held key; the signature is bound to the release workflow's identity
 via GitHub OIDC and logged to the public Sigstore transparency log).
 
-This step is optional. If you have `cosign` installed and want the stronger
-guarantee, download the bundle alongside the manifest and verify:
+This step is optional. If you have **[cosign](https://github.com/sigstore/cosign) v3
+or newer** installed and want the stronger guarantee, download the bundle
+alongside the manifest and verify (releases from `0.4.2` on are signed with
+cosign v3, whose Sigstore-bundle format needs cosign v3+ to verify):
 
 ```bash
 curl -L -o SHA256SUMS https://github.com/smkwlab/tdig/releases/latest/download/SHA256SUMS
