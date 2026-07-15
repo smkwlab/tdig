@@ -159,7 +159,7 @@ The command line syntax mirrors `dig`:
 tdig [options] [@server] host [type] [class]
 ```
 
-Positional arguments may appear in any order with respect to options; the leading `@` denotes the DNS server.
+Positional arguments may appear in any order, as in `dig`: a token matching a known record type or class name is interpreted as such regardless of position (so `tdig TXT example.com` and `tdig example.com TXT` are equivalent), and the leading `@` denotes the DNS server. To query a host literally named after a record type, add a trailing dot (e.g. `tdig txt.`).
 
 When unspecified:
 - **server** defaults to `8.8.8.8`
