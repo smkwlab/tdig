@@ -42,10 +42,73 @@ defmodule TdigTest do
       assert Tdig.a2s(:mx) == "MX"
     end
 
-    test "str2atom converts strings to lowercase atoms" do
-      assert Tdig.CLI.str2atom("A") == :a
-      assert Tdig.CLI.str2atom("CNAME") == :cname
-      assert Tdig.CLI.str2atom("mx") == :mx
+    test "parse_type converts known type names to lowercase atoms" do
+      assert Tdig.CLI.parse_type("A") == :a
+      assert Tdig.CLI.parse_type("CNAME") == :cname
+      assert Tdig.CLI.parse_type("mx") == :mx
+    end
+
+    test "parse_type returns nil for unknown type names" do
+      assert Tdig.CLI.parse_type("foo") == nil
+      assert Tdig.CLI.parse_type("sony.com") == nil
+      # a known atom that is not an RR type must not be accepted
+      assert Tdig.CLI.parse_type("help") == nil
+    end
+
+    test "parse_class converts known class names to lowercase atoms" do
+      assert Tdig.CLI.parse_class("IN") == :in
+      assert Tdig.CLI.parse_class("ch") == :ch
+    end
+
+    test "parse_class returns nil for unknown class names" do
+      assert Tdig.CLI.parse_class("foo") == nil
+      # RR type names are not classes
+      assert Tdig.CLI.parse_class("txt") == nil
+    end
+  end
+
+  describe "dig-compatible argument order (Issue #77)" do
+    test "parse_argv accepts type before name" do
+      assert Tdig.CLI.parse_argv({[], ["txt", "sony.com"], []}) ==
+               {[], %{name: "sony.com.", type: :txt, class: nil, server: nil}, []}
+    end
+
+    test "parse_argv accepts uppercase type before name" do
+      assert Tdig.CLI.parse_argv({[], ["TXT", "sony.com"], []}) ==
+               {[], %{name: "sony.com.", type: :txt, class: nil, server: nil}, []}
+    end
+
+    test "parse_argv accepts class and type in any position" do
+      assert Tdig.CLI.parse_argv({[], ["ch", "txt", "version.bind"], []}) ==
+               {[], %{name: "version.bind.", type: :txt, class: :ch, server: nil}, []}
+    end
+
+    test "parse_argv resolves any as type, not class" do
+      assert Tdig.CLI.parse_argv({[], ["any", "example.com"], []}) ==
+               {[], %{name: "example.com.", type: :any, class: nil, server: nil}, []}
+    end
+
+    test "parse_argv keeps name-first order working" do
+      assert Tdig.CLI.parse_argv({[], ["sony.com", "txt"], []}) ==
+               {[], %{name: "sony.com.", type: :txt, class: nil, server: nil}, []}
+    end
+
+    test "parse_argv with server, type and name in dig order" do
+      assert Tdig.CLI.parse_argv({[], ["@8.8.8.8", "txt", "sony.com"], []}) ==
+               {[], %{name: "sony.com.", type: :txt, class: nil, server: "8.8.8.8"}, []}
+    end
+
+    test "trailing dot forces a type-like token to be a name" do
+      # querying a host literally named "txt" is still possible, as in dig
+      assert Tdig.CLI.parse_argv({[], ["txt."], []}) ==
+               {[], %{name: "txt.", type: nil, class: nil, server: nil}, []}
+    end
+
+    test "unknown token becomes the name instead of an invalid type" do
+      # previously this token was force-converted to a type atom and
+      # crashed packet creation with ArgumentError (Issue #77)
+      assert Tdig.CLI.parse_argv({[], ["not-a-type"], []}) ==
+               {[], %{name: "not-a-type.", type: nil, class: nil, server: nil}, []}
     end
   end
 

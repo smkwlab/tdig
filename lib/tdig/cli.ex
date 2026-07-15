@@ -92,12 +92,54 @@ defmodule Tdig.CLI do
   def parse_switches({parsed, argv, errors}),
     do: {Enum.map(parsed, &switch_convert_atom(&1)), argv, errors}
 
-  def switch_convert_atom({:class, value}), do: {:class, str2atom(value)}
-  def switch_convert_atom({:type, value}), do: {:type, str2atom(value)}
+  def switch_convert_atom({:class, value}) do
+    case parse_class(value) do
+      nil -> invalid_argument("Unknown class: #{value}")
+      class -> {:class, class}
+    end
+  end
+
+  def switch_convert_atom({:type, value}) do
+    case parse_type(value) do
+      nil -> invalid_argument("Unknown type: #{value}")
+      type -> {:type, type}
+    end
+  end
+
   def switch_convert_atom(n), do: n
 
-  @spec str2atom(String.t()) :: atom()
-  def str2atom(arg), do: arg |> String.downcase() |> String.to_atom()
+  # Known RR type/class names derived from tenbin_dns at compile time
+  # (classes are 16-bit, hence 0..0xFFFF). Runtime lookups are then pure
+  # map reads: arbitrary input never creates atoms, and no module-load
+  # order is assumed (escript loads modules lazily), see Issue #77.
+  @type_by_name for code <- 0..0xFFFF,
+                    type = DNS.type(code),
+                    into: %{},
+                    do: {Atom.to_string(type), type}
+
+  @class_by_name for code <- 0..0xFFFF,
+                     class = DNS.class(code),
+                     into: %{},
+                     do: {Atom.to_string(class), class}
+
+  @doc """
+  Converts a string to a known RR type atom, or returns `nil` so that
+  an invalid type never reaches packet creation (Issue #77).
+  """
+  @spec parse_type(String.t()) :: atom() | nil
+  def parse_type(arg), do: Map.get(@type_by_name, String.downcase(arg))
+
+  @doc """
+  Converts a string to a known DNS class atom, or returns `nil`.
+  """
+  @spec parse_class(String.t()) :: atom() | nil
+  def parse_class(arg), do: Map.get(@class_by_name, String.downcase(arg))
+
+  @spec invalid_argument(String.t()) :: no_return()
+  defp invalid_argument(message) do
+    IO.puts(:stderr, message)
+    System.halt(1)
+  end
 
   def parse_argv({parsed, argv, errors}) do
     {parsed, argv |> parse_argv_item(%{server: nil, name: nil, type: nil, class: nil}), errors}
@@ -115,21 +157,26 @@ defmodule Tdig.CLI do
     parse_argv_item(argv, %{result | server: arg1})
   end
 
-  def parse_argv_item([arg1 | argv], %{name: nil} = result) do
-    parse_argv_item(argv, %{result | name: arg1 |> add_tail_dot})
+  def parse_argv_item([arg1 | argv], result) do
+    parse_argv_item(argv, assign_positional_arg(arg1, result))
   end
 
-  def parse_argv_item([arg1 | argv], %{type: nil} = result) do
-    parse_argv_item(argv, %{result | type: arg1 |> str2atom})
-  end
+  # dig-compatible positional argument handling (Issue #77): a token that
+  # matches a known RR type (or class) name is taken as the type (or class)
+  # regardless of position, so both `tdig txt sony.com` and
+  # `tdig sony.com txt` work. Type wins over class for ambiguous tokens
+  # such as "any", and a trailing dot (e.g. "txt.") forces a token to be
+  # interpreted as a name, both as in dig.
+  defp assign_positional_arg(arg, result) do
+    type = if result.type == nil, do: parse_type(arg)
+    class = if result.class == nil, do: parse_class(arg)
 
-  def parse_argv_item([arg1 | argv], %{class: nil} = result) do
-    parse_argv_item(argv, %{result | class: arg1 |> str2atom})
-  end
-
-  def parse_argv_item(_, _) do
-    IO.puts(:stderr, "argument error")
-    System.halt(1)
+    cond do
+      type -> %{result | type: type}
+      class -> %{result | class: class}
+      result.name == nil -> %{result | name: add_tail_dot(arg)}
+      true -> invalid_argument("Invalid argument: #{arg}")
+    end
   end
 
   @spec add_tail_dot(String.t()) :: String.t()
