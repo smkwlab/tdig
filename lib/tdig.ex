@@ -267,7 +267,7 @@ defmodule Tdig do
   def rdata_to_string(rdata, :ns), do: escape(rdata.name)
   def rdata_to_string(rdata, :ptr), do: escape(rdata.name)
   def rdata_to_string(rdata, :cname), do: escape(rdata.name)
-  def rdata_to_string(rdata, :txt), do: escape(rdata.txt)
+  def rdata_to_string(rdata, :txt), do: quote_character_string(rdata.txt)
   def rdata_to_string(rdata, :mx), do: "#{rdata.preference} #{escape(rdata.name)}"
 
   def rdata_to_string(rdata, :caa),
@@ -295,6 +295,23 @@ defmodule Tdig do
   defp escape_byte(?\\), do: "\\\\"
   defp escape_byte(byte) when byte in 0x20..0x7E, do: <<byte>>
   defp escape_byte(byte), do: "\\" <> String.pad_leading(Integer.to_string(byte), 3, "0")
+
+  # Render a TXT character-string the way dig does: wrapped in double quotes,
+  # with `"` escaped on top of the shared escaping above. Domain names go
+  # through escape/1 instead — dig leaves those unquoted, so the quoting must
+  # not be folded into escape_byte/1.
+  #
+  # tenbin_dns returns the concatenation of a TXT record's character-strings
+  # as one binary (boundaries are deliberately not preserved, see
+  # smkwlab/tenbin_dns#95), so a multi-string record prints as a single quoted
+  # value where dig prints `"abc" "def"`. The value itself is complete.
+  defp quote_character_string(string) when is_binary(string) do
+    escaped = for <<byte <- string>>, into: "", do: escape_character_string_byte(byte)
+    <<?", escaped::binary, ?">>
+  end
+
+  defp escape_character_string_byte(?"), do: "\\\""
+  defp escape_character_string_byte(byte), do: escape_byte(byte)
 
   def disp_tailer(server, port, size, time) do
     # Get system local time using NaiveDateTime (OS-independent, cleaner)
