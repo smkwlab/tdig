@@ -208,11 +208,17 @@ defmodule Tdig.CLI do
     end
   end
 
+  # The subnet clause comes first because an ECS option needs EDNS to carry it.
+  # `parse_args/1` sets :edns through `Map.put_new/3`, so the key is always
+  # present and the `edns: false` clause below would otherwise shadow this one,
+  # dropping --subnet silently unless --edns was also given. dig behaves the
+  # same way: +subnet turns EDNS on even alongside an explicit +noedns.
+  # `Map.put_new/3` leaves an explicitly requested --bufsize alone.
+  def check_edns(%{subnet: subnet} = arg) when is_binary(subnet),
+    do: arg |> Map.put_new(:bufsize, DNS.edns_max_udpsize()) |> mk_edns_with_subnet
+
   def check_edns(%{bufsize: size} = arg) when is_integer(size), do: mk_edns(arg)
   def check_edns(%{edns: false} = arg), do: arg
-
-  def check_edns(%{subnet: subnet} = arg) when is_binary(subnet),
-    do: arg |> Map.put(:bufsize, DNS.edns_max_udpsize()) |> mk_edns_with_subnet
 
   def check_edns(arg) do
     arg
@@ -249,7 +255,7 @@ defmodule Tdig.CLI do
            %{
              family: 1 | 2,
              client_subnet: :inet.ip_address(),
-             source_prefix: integer(),
+             source_prefix: non_neg_integer(),
              scope_prefix: 0
            }}
 
@@ -257,7 +263,7 @@ defmodule Tdig.CLI do
   def parse_subnet_option(subnet) do
     case String.split(subnet, "/") do
       [addr_str, prefix_str] ->
-        prefix = String.to_integer(prefix_str)
+        prefix = prefix_length!(subnet, prefix_str)
 
         case :inet.parse_address(String.to_charlist(addr_str)) do
           {:ok, {a, b, c, d}} ->
@@ -292,6 +298,37 @@ defmodule Tdig.CLI do
       _ ->
         IO.puts(:stderr, "Invalid subnet format. Use: address/prefix (e.g., 192.0.2.1/24)")
         System.halt(1)
+    end
+  end
+
+  defp prefix_length!(subnet, prefix_str) do
+    case parse_prefix_length(prefix_str) do
+      {:ok, prefix} -> prefix
+      :error -> invalid_argument("Invalid prefix length in #{subnet}: not a valid number")
+    end
+  end
+
+  @doc """
+  Parses a subnet prefix length, accepting only a bare non-negative number.
+
+  A value above the address family's width is *not* rejected here: dig caps it
+  at 32 or 128 rather than erroring, and `parse_subnet_option/1` does the same
+  with `min/2`. What dig does reject is anything that is not an unsigned
+  number, which is what this function screens out — `min/2` only caps the
+  upper end, so a negative prefix would otherwise reach the query untouched.
+
+  Digits only, so a sign is refused even where `Integer.parse/1` would accept
+  it (`"+24"`); leading zeros are fine. This matches dig, measured with 9.20.26:
+
+      192.0.2.1/+24 => dig: invalid prefix length in '192.0.2.1/+24': not a valid number
+      192.0.2.1/024 => CLIENT-SUBNET: 192.0.2.0/24/0
+  """
+  @spec parse_prefix_length(String.t()) :: {:ok, non_neg_integer()} | :error
+  def parse_prefix_length(prefix_str) do
+    if String.match?(prefix_str, ~r/\A\d+\z/) do
+      {:ok, String.to_integer(prefix_str)}
+    else
+      :error
     end
   end
 
