@@ -236,7 +236,24 @@ defmodule Tdig.CLI do
     |> Map.put(:options, [ecs_option])
   end
 
-  @spec parse_subnet_option(String.t()) :: {atom(), map()}
+  @typedoc """
+  An EDNS Client Subnet option, shaped as `Tenbin.DNS` expects in `:options`.
+
+  `family` is 1 for IPv4 and 2 for IPv6 (RFC 7871). `source_prefix` is the
+  prefix length given on the command line, capped at the family's width;
+  `scope_prefix` is always 0 in a query, and only a response carries a
+  meaningful value.
+  """
+  @type edns_client_subnet ::
+          {:edns_client_subnet,
+           %{
+             family: 1 | 2,
+             client_subnet: :inet.ip_address(),
+             source_prefix: integer(),
+             scope_prefix: 0
+           }}
+
+  @spec parse_subnet_option(String.t()) :: edns_client_subnet()
   def parse_subnet_option(subnet) do
     case String.split(subnet, "/") do
       [addr_str, prefix_str] ->
