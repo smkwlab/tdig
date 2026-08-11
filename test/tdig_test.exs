@@ -335,6 +335,133 @@ defmodule TdigTest do
     end
   end
 
+  describe "subnet prefix length validation (Issue #86)" do
+    # dig parses the prefix as an unsigned number and refuses anything else
+    # ("invalid prefix length in '...': not a valid number"), so a negative or
+    # non-numeric value is an error rather than something to coerce.
+    test "parse_prefix_length/1 accepts a bare non-negative number" do
+      assert Tdig.CLI.parse_prefix_length("24") == {:ok, 24}
+      assert Tdig.CLI.parse_prefix_length("0") == {:ok, 0}
+      # dig accepts leading zeros: 192.0.2.1/024 => CLIENT-SUBNET: 192.0.2.0/24/0
+      assert Tdig.CLI.parse_prefix_length("024") == {:ok, 24}
+    end
+
+    test "parse_prefix_length/1 rejects a negative number" do
+      assert Tdig.CLI.parse_prefix_length("-5") == :error
+      assert Tdig.CLI.parse_prefix_length("-1") == :error
+    end
+
+    test "parse_prefix_length/1 rejects anything that is not a bare number" do
+      for input <- ["abc", "", " 24", "24x", "2.4", "+24"] do
+        assert Tdig.CLI.parse_prefix_length(input) == :error,
+               "expected #{inspect(input)} to be rejected"
+      end
+    end
+
+    # An over-range prefix is NOT an error in dig: it is capped at the address
+    # family's width. Measured with dig 9.20.26 via +qr:
+    #   192.0.2.1/999   => CLIENT-SUBNET: 192.0.2.1/32/0
+    #   2001:db8::1/200 => CLIENT-SUBNET: 2001:db8::1/128/0
+    test "an over-range IPv4 prefix is clamped to 32 rather than rejected" do
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/999")
+      assert ecs.source_prefix == 32
+
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/33")
+      assert ecs.source_prefix == 32
+    end
+
+    test "an over-range IPv6 prefix is clamped to 128 rather than rejected" do
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("2001:db8::1/200")
+      assert ecs.source_prefix == 128
+    end
+
+    test "an extra slash is a format error, not a prefix error" do
+      # split_subnet/1 is where parse_subnet_option/1 decides between its two
+      # error messages. Asserting it directly, rather than the halting call,
+      # keeps the distinction testable: :error here means the input never
+      # reaches parse_prefix_length/1 and gets the format message instead.
+      assert Tdig.CLI.split_subnet("192.0.2.1/24/8") == :error
+      assert Tdig.CLI.split_subnet("192.0.2.1//24") == :error
+      assert Tdig.CLI.split_subnet("192.0.2.1") == :error
+
+      assert Tdig.CLI.split_subnet("192.0.2.1/24") == {:ok, "192.0.2.1", "24"}
+      # an empty prefix is a well-formed split, so it is a prefix error
+      assert Tdig.CLI.split_subnet("2001:db8::1/") == {:ok, "2001:db8::1", ""}
+      assert Tdig.CLI.parse_prefix_length("") == :error
+    end
+
+    test "a prefix far above the family width is still clamped" do
+      # dig stops at a 32-bit unsigned and reports "out of range" beyond it
+      # (4294967295 clamps to 32, 4294967296 errors), which is an artefact of
+      # its C parsing rather than a protocol limit. tdig has no such ceiling;
+      # every value at or above the family width produces the same option, so
+      # the emitted query matches dig for everything dig accepts.
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/4294967295")
+      assert ecs.source_prefix == 32
+
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/99999999999999999999")
+      assert ecs.source_prefix == 32
+    end
+  end
+
+  describe "subnet option reaches the query (Issue #86)" do
+    # parse_args/1 sets :edns via Map.put_new, so the key is always present.
+    # These go through parse_args rather than calling check_edns/1 with a
+    # hand-built map, because the shadowing bug was invisible to a map that
+    # omitted :edns.
+    defp ecs_options(argv), do: Tdig.CLI.parse_args(argv)[:options]
+
+    test "--subnet alone carries the ECS option" do
+      assert [{:edns_client_subnet, ecs}] =
+               ecs_options(["example.com", "--subnet", "192.0.2.1/24"])
+
+      assert ecs.family == 1
+      assert ecs.source_prefix == 24
+    end
+
+    test "--subnet combined with --bufsize carries the ECS option" do
+      argv = ["example.com", "--bufsize", "1232", "--subnet", "192.0.2.1/24"]
+      assert [{:edns_client_subnet, ecs}] = ecs_options(argv)
+      assert ecs.source_prefix == 24
+    end
+
+    test "--subnet keeps an explicitly requested bufsize" do
+      argv = ["example.com", "--bufsize", "1232", "--subnet", "192.0.2.1/24"]
+      assert Tdig.CLI.parse_args(argv)[:bufsize] == 1232
+    end
+
+    test "--subnet with --bufsize reaches the OPT record that gets sent" do
+      # parse_args/1 alone does not prove the value is emitted: the OPT
+      # pseudo-record is built later, in Tdig.check_edns/1.
+      argv = ["example.com", "--bufsize", "1232", "--subnet", "192.0.2.1/24"]
+      assert [opt] = argv |> Tdig.CLI.parse_args() |> Tdig.check_edns()
+      assert opt.type == :opt
+      assert opt.payload_size == 1232
+      assert [{:edns_client_subnet, ecs}] = opt.rdata
+      assert ecs.source_prefix == 24
+    end
+
+    test "--subnet combined with --edns still carries the ECS option" do
+      argv = ["example.com", "--edns", "--subnet", "192.0.2.1/24"]
+      assert [{:edns_client_subnet, _}] = ecs_options(argv)
+    end
+
+    test "--subnet turns EDNS on, as dig's +subnet does" do
+      assert Tdig.CLI.parse_args(["example.com", "--subnet", "192.0.2.1/24"])[:edns] == true
+    end
+
+    test "EDNS without a subnet carries no options" do
+      assert ecs_options(["example.com", "--edns"]) == []
+      assert ecs_options(["example.com", "--bufsize", "1232"]) == []
+    end
+
+    test "a plain query still has EDNS off" do
+      args = Tdig.CLI.parse_args(["example.com"])
+      assert args[:edns] == false
+      assert args[:options] == nil
+    end
+  end
+
   describe "version reporting (Issue #49)" do
     test "version/0 returns the mix.exs project version" do
       # Guards against stale hardcoded version strings drifting from mix.exs.
