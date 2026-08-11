@@ -262,6 +262,29 @@ Run `tdig --help` for the in-binary reference.
 | TCP forcing | `+tcp` | `--tcp` |
 | Reverse lookup | `-x` | `-x` |
 | Packet I/O | external tools | **Built-in `--read` / `--write`** |
+| Multi-string TXT | `"abc" "def"` | `"abcdef"` (concatenated) |
+
+### Known difference: multi-string TXT records
+
+A TXT record's RDATA is a list of character-strings, and values longer than 255
+bytes (DKIM keys, long SPF records) are always split across several of them.
+`dig` prints each one separately:
+
+```
+example.com.  300  IN  TXT  "abc" "def"
+```
+
+`tdig` prints their concatenation as a single quoted value instead:
+
+```
+example.com.  300  IN  TXT  "abcdef"
+```
+
+**No data is lost** — the full value is shown, only the string boundaries are
+not. This follows [`tenbin_dns`](https://github.com/smkwlab/tenbin_dns), which
+returns the concatenation as the record's logical value (matching how SPF
+treats multi-string TXT per RFC 7208 §3.3) and deliberately does not preserve
+boundaries.
 
 If you already have BIND's `dig`, you don't need `tdig`. It's useful when:
 

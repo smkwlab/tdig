@@ -246,7 +246,39 @@ defmodule TdigTest do
 
     test "rdata_to_string formats TXT records" do
       rdata = %{txt: "v=spf1 include:_spf.google.com ~all"}
-      assert Tdig.rdata_to_string(rdata, :txt) == "v=spf1 include:_spf.google.com ~all"
+      assert Tdig.rdata_to_string(rdata, :txt) == ~s("v=spf1 include:_spf.google.com ~all")
+    end
+
+    test "rdata_to_string escapes double quotes inside TXT records" do
+      rdata = %{txt: ~s(a"b)}
+      assert Tdig.rdata_to_string(rdata, :txt) == ~S("a\"b")
+    end
+
+    test "rdata_to_string escapes backslashes inside TXT records" do
+      rdata = %{txt: ~S(a\b)}
+      assert Tdig.rdata_to_string(rdata, :txt) == ~S("a\\b")
+    end
+
+    test "rdata_to_string escapes non-printable bytes inside TXT records" do
+      # Terminal escape sequences must not survive into the output; dig renders
+      # non-printable octets as three-digit decimal escapes.
+      rdata = %{txt: <<0x1B, "[31m">>}
+      assert Tdig.rdata_to_string(rdata, :txt) == ~S("\027[31m")
+    end
+
+    test "rdata_to_string renders an empty TXT record as empty quotes" do
+      rdata = %{txt: ""}
+      assert Tdig.rdata_to_string(rdata, :txt) == ~s("")
+    end
+
+    test "rdata_to_string leaves domain names unquoted" do
+      # dig quotes TXT character-strings but not domain names; the TXT-specific
+      # quoting must not leak into the shared escape/1 path.
+      assert Tdig.rdata_to_string(%{name: "ns1.example.com"}, :ns) == "ns1.example.com"
+      assert Tdig.rdata_to_string(%{name: "alias.example.com"}, :cname) == "alias.example.com"
+
+      assert Tdig.rdata_to_string(%{preference: 10, name: "mail.example.com"}, :mx) ==
+               "10 mail.example.com"
     end
 
     test "rdata_to_string handles unknown types" do
@@ -363,7 +395,9 @@ defmodule TdigTest do
     end
 
     test "rdata_to_string escapes untrusted TXT and name bytes" do
-      assert Tdig.rdata_to_string(%{txt: <<"hi", 0x1B, "!">>}, :txt) == "hi\\027!"
+      # TXT is additionally wrapped in quotes to match dig; the escaping of the
+      # ESC byte is what matters here.
+      assert Tdig.rdata_to_string(%{txt: <<"hi", 0x1B, "!">>}, :txt) == ~S("hi\027!")
 
       assert Tdig.rdata_to_string(%{name: <<"ns", 0x1B, ".example.">>}, :cname) ==
                "ns\\027.example."
