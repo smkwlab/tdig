@@ -374,6 +374,13 @@ defmodule TdigTest do
       {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("2001:db8::1/200")
       assert ecs.source_prefix == 128
     end
+
+    test "an extra slash is a format error, not a prefix error" do
+      # String.split/2 yields three parts, which no address/prefix clause
+      # matches, so this falls through to the existing format message.
+      assert String.split("192.0.2.1/24/8", "/") == ["192.0.2.1", "24", "8"]
+      assert String.split("192.0.2.1//24", "/") == ["192.0.2.1", "", "24"]
+    end
   end
 
   describe "subnet option reaches the query (Issue #86)" do
@@ -400,6 +407,17 @@ defmodule TdigTest do
     test "--subnet keeps an explicitly requested bufsize" do
       argv = ["example.com", "--bufsize", "1232", "--subnet", "192.0.2.1/24"]
       assert Tdig.CLI.parse_args(argv)[:bufsize] == 1232
+    end
+
+    test "--subnet with --bufsize reaches the OPT record that gets sent" do
+      # parse_args/1 alone does not prove the value is emitted: the OPT
+      # pseudo-record is built later, in Tdig.check_edns/1.
+      argv = ["example.com", "--bufsize", "1232", "--subnet", "192.0.2.1/24"]
+      assert [opt] = argv |> Tdig.CLI.parse_args() |> Tdig.check_edns()
+      assert opt.type == :opt
+      assert opt.payload_size == 1232
+      assert [{:edns_client_subnet, ecs}] = opt.rdata
+      assert ecs.source_prefix == 24
     end
 
     test "--subnet combined with --edns still carries the ECS option" do
