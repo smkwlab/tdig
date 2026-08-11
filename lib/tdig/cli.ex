@@ -261,8 +261,8 @@ defmodule Tdig.CLI do
 
   @spec parse_subnet_option(String.t()) :: edns_client_subnet()
   def parse_subnet_option(subnet) do
-    case String.split(subnet, "/") do
-      [addr_str, prefix_str] ->
+    case split_subnet(subnet) do
+      {:ok, addr_str, prefix_str} ->
         prefix = prefix_length!(subnet, prefix_str)
 
         case :inet.parse_address(String.to_charlist(addr_str)) do
@@ -295,9 +295,24 @@ defmodule Tdig.CLI do
             System.halt(1)
         end
 
-      _ ->
+      :error ->
         IO.puts(:stderr, "Invalid subnet format. Use: address/prefix (e.g., 192.0.2.1/24)")
         System.halt(1)
+    end
+  end
+
+  @doc """
+  Splits a `--subnet` argument into its address and prefix parts.
+
+  Anything other than exactly one separator is a format error rather than a
+  prefix error, so `"192.0.2.1/24/8"` and `"192.0.2.1"` are both rejected here
+  and never reach `parse_prefix_length/1`.
+  """
+  @spec split_subnet(String.t()) :: {:ok, String.t(), String.t()} | :error
+  def split_subnet(subnet) do
+    case String.split(subnet, "/") do
+      [addr_str, prefix_str] -> {:ok, addr_str, prefix_str}
+      _ -> :error
     end
   end
 

@@ -376,10 +376,31 @@ defmodule TdigTest do
     end
 
     test "an extra slash is a format error, not a prefix error" do
-      # String.split/2 yields three parts, which no address/prefix clause
-      # matches, so this falls through to the existing format message.
-      assert String.split("192.0.2.1/24/8", "/") == ["192.0.2.1", "24", "8"]
-      assert String.split("192.0.2.1//24", "/") == ["192.0.2.1", "", "24"]
+      # split_subnet/1 is where parse_subnet_option/1 decides between its two
+      # error messages. Asserting it directly, rather than the halting call,
+      # keeps the distinction testable: :error here means the input never
+      # reaches parse_prefix_length/1 and gets the format message instead.
+      assert Tdig.CLI.split_subnet("192.0.2.1/24/8") == :error
+      assert Tdig.CLI.split_subnet("192.0.2.1//24") == :error
+      assert Tdig.CLI.split_subnet("192.0.2.1") == :error
+
+      assert Tdig.CLI.split_subnet("192.0.2.1/24") == {:ok, "192.0.2.1", "24"}
+      # an empty prefix is a well-formed split, so it is a prefix error
+      assert Tdig.CLI.split_subnet("2001:db8::1/") == {:ok, "2001:db8::1", ""}
+      assert Tdig.CLI.parse_prefix_length("") == :error
+    end
+
+    test "a prefix far above the family width is still clamped" do
+      # dig stops at a 32-bit unsigned and reports "out of range" beyond it
+      # (4294967295 clamps to 32, 4294967296 errors), which is an artefact of
+      # its C parsing rather than a protocol limit. tdig has no such ceiling;
+      # every value at or above the family width produces the same option, so
+      # the emitted query matches dig for everything dig accepts.
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/4294967295")
+      assert ecs.source_prefix == 32
+
+      {:edns_client_subnet, ecs} = Tdig.CLI.parse_subnet_option("192.0.2.1/99999999999999999999")
+      assert ecs.source_prefix == 32
     end
   end
 
