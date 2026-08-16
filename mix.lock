@@ -9,5 +9,5 @@
   "jason": {:hex, :jason, "1.4.5", "2e3a008590b0b8d7388c20293e9dcc9cf3e5d642fd2a114e4cbbb52e595d940a", [:mix], [{:decimal, "~> 1.0 or ~> 2.0 or ~> 3.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm", "b0c823996102bcd0239b3c2444eb00409b72f6a140c1950bc8b457d836b30684"},
   "socket": {:hex, :socket, "0.3.13", "98a2ab20ce17f95fb512c5cadddba32b57273e0d2dba2d2e5f976c5969d0c632", [:mix], [], "hexpm", "f82ea9833ef49dde272e6568ab8aac657a636acb4cf44a7de8a935acb8957c2e"},
   "tenbin_dns": {:git, "https://github.com/smkwlab/tenbin_dns.git", "65068897e23113c7308e42ce0f8875f5aef4c0aa", [tag: "0.8.0"]},
-  "zoneinfo": {:hex, :zoneinfo, "0.1.8", "add41f44e6f19d4d16d9eebe3261d6307c58bdbe7cc61ffb7b18cad346b0467f", [:mix], [], "hexpm", "3999755971bbf85f0c8c75a724be560199bb63406660585849f0eb680e2333f7"},
+  "zoneinfo": {:hex, :zoneinfo, "0.1.9", "6f5188e836cc057ef13d8ab659464fccfda032d48b8574619fc12a58f0579c2b", [:mix], [], "hexpm", "8bc3266afe79ab668de4fb2a7f182152c90f610bdd8519528e8ea1af70e0dea8"},
 }
