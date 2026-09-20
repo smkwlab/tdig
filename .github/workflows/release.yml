@@ -20,6 +20,14 @@ on:
       # match real tags (verified empirically: tag `0.3.0` did not
       # trigger this workflow when the pattern was extglob).
       - '[0-9]+.[0-9]+.[0-9]+'
+  # Build both matrix halves without publishing anything, so that a change
+  # to this workflow -- or to the OTP/Elixir pair it builds with -- can be
+  # exercised before a version is spent on it. Until this existed the only
+  # way to run the release path was to push a real tag, and a tag cannot be
+  # taken back: tdig #50 shipped a tag filter that matched nothing, and #51
+  # had to undo it. The two tag-only steps below are guarded on the ref, so
+  # a dispatch run stops after uploading the binaries as workflow artifacts.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -64,6 +72,9 @@ jobs:
       - name: Verify mix.exs version matches the tag
         # Refuse to release if mix.exs version diverges from the pushed tag,
         # which would leave `tdig --version` lying about the release.
+        # A dispatch run has no tag to compare against -- GITHUB_REF_NAME is
+        # the branch there -- so this check only applies to tag pushes.
+        if: startsWith(github.ref, 'refs/tags/')
         run: |
           MIX_VERSION=$(mix run --no-start -e 'IO.puts(Mix.Project.config()[:version])' | tail -n 1)
           TAG_VERSION="${GITHUB_REF_NAME}"
@@ -95,6 +106,10 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: build
+    # Never publish from a dispatch run. The point of the dispatch path is to
+    # prove the build, so everything from here on -- the GitHub Release, the
+    # checksums and the cosign signature -- stays on the tag path.
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write # create the release and upload assets
