@@ -42,22 +42,27 @@ jobs:
         include:
           - os: ubuntu-latest
             asset_name: tdig-linux-x86_64
-            otp: '27.3.4.4'
-            elixir: '1.17.3'
           - os: macos-latest
             asset_name: tdig-macos-arm64
-            otp: '27.3.4.4'
-            elixir: '1.17.3'
 
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Set up Erlang/Elixir
+        # Both rows build with the same pair, so state it here as a literal
+        # instead of routing it through `matrix.otp` / `matrix.elixir`.
+        # Renovate reads setup-beam's version inputs, but only when they are
+        # literals: behind a `${{ }}` reference it sees an expression and
+        # raises nothing. That is how this pair sat at OTP 27.3.4.4 while the
+        # CI matrix moved on to 27.3.4.17 -- the same blind spot as the
+        # workflow_call input defaults in smkwlab/.github#146, which needed a
+        # custom manager to reach. Keeping the value where the built-in
+        # manager already looks avoids needing one here.
         uses: erlef/setup-beam@54075bcc5e249e4758d363f27d099f55d843f124 # v1.24.1
         with:
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
+          otp-version: '29.1'
+          elixir-version: '1.20.4'
 
       - name: Cache mix dependencies
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
