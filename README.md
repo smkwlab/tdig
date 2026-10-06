@@ -295,7 +295,7 @@ If you already have BIND's `dig`, you don't need `tdig`. It's useful when:
 ## Requirements
 
 - **Bakeware binary**: no runtime requirement
-- **escript / source build**: Elixir 1.17 or later, Erlang/OTP 27 or later. CI exercises the matrix Elixir 1.17.3 / OTP 27.3.4.4 (LTS) and Elixir 1.19.5 / OTP 28.5 (latest) via the shared reusable workflow `smkwlab/.github/.github/workflows/elixir-ci.yml@v1`.
+- **escript / source build**: Elixir 1.17 or later, Erlang/OTP 27 or later. CI exercises two pairs, a supported older one and the newest; the versions live in the `workflow_call` input defaults of the shared `smkwlab/.github/.github/workflows/elixir-ci.yml@v1`, where Renovate keeps them current. They are not repeated here because a copy drifts — this line claimed OTP 27.3.4.4 and Elixir 1.19.5 / OTP 28.5 long after the matrix had moved on.
 - **Git** is needed for `mix deps.get` because `tenbin_dns` is fetched from a git tag
 
 ## Architecture
